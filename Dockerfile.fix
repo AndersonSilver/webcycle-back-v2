@@ -1,4 +1,4 @@
-# Dockerfile para Backend
+# Dockerfile para Backend (Versão Corrigida - yarn.lock opcional)
 FROM node:20-alpine AS builder
 
 # Instalar dependências do sistema necessárias para Puppeteer
