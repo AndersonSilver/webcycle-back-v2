@@ -1,0 +1,2565 @@
+{
+	"info": {
+		"_postman_id": "tb-psico-back-collection",
+		"name": "TB-PSICO-BACK - Plataforma de Cursos",
+		"description": "Collection completa da API da Plataforma de Cursos Tiago Bonifacio",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Autenticação",
+			"item": [
+				{
+					"name": "Registro",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"password\": \"senha123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"joao@example.com\",\n  \"password\": \"senha123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Google OAuth - Iniciar",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/auth/google",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "google"]
+						}
+					}
+				},
+				{
+					"name": "Obter Usuário Autenticado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Perfil",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva Atualizado\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Alterar Senha",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"senha123\",\n  \"newPassword\": \"novaSenha456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "change-password"]
+						}
+					}
+				},
+				{
+					"name": "Esqueci Minha Senha",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"joao@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "forgot-password"]
+						}
+					}
+				},
+				{
+					"name": "Redefinir Senha",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset_token_aqui\",\n  \"newPassword\": \"novaSenha456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "reset-password"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 Cursos",
+			"item": [
+				{
+					"name": "Listar Cursos",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses?page=1&limit=10&category=psicologia",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "category",
+									"value": "psicologia"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Buscar Cursos",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses/search?q=ansiedade&category=psicologia&minPrice=0&maxPrice=500",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "ansiedade"
+								},
+								{
+									"key": "category",
+									"value": "psicologia"
+								},
+								{
+									"key": "minPrice",
+									"value": "0"
+								},
+								{
+									"key": "maxPrice",
+									"value": "500"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Detalhes do Curso",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Cursos Relacionados",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses/:id/related",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":id", "related"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Compartilhar Curso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/courses/:id/share",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":id", "share"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Acessar via Token Compartilhado",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses/shared/:token",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "shared", ":token"],
+							"variable": [
+								{
+									"key": "token",
+									"value": "share-token-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Criar Curso (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Curso de Psicologia\",\n  \"subtitle\": \"Aprenda os fundamentos\",\n  \"description\": \"Descrição completa do curso\",\n  \"price\": 299.90,\n  \"originalPrice\": 399.90,\n  \"category\": \"psicologia\",\n  \"image\": \"https://example.com/image.jpg\",\n  \"videoUrl\": \"https://example.com/video.mp4\",\n  \"instructor\": \"Tiago Bonifacio\",\n  \"duration\": \"40 horas\",\n  \"lessons\": 20,\n  \"aboutCourse\": \"Sobre o curso\",\n  \"benefits\": [\"Benefício 1\", \"Benefício 2\"],\n  \"bonuses\": [\"Bônus 1\", \"Bônus 2\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Curso (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Curso Atualizado\",\n  \"price\": 249.90\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Curso (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/courses/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Módulos do Curso",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/courses/:courseId/modules",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":courseId", "modules"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Criar Módulo (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Módulo 1: Introdução\",\n  \"duration\": \"2 horas\",\n  \"order\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/:courseId/modules",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":courseId", "modules"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Módulo (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Módulo Atualizado\",\n  \"duration\": \"3 horas\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/:courseId/modules/:moduleId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":courseId", "modules", ":moduleId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								},
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Módulo (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/courses/:courseId/modules/:moduleId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", ":courseId", "modules", ":moduleId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								},
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Módulos",
+			"item": [
+				{
+					"name": "Listar Aulas do Módulo",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/modules/:moduleId/lessons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "modules", ":moduleId", "lessons"],
+							"variable": [
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Criar Aula (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Aula 1: Introdução\",\n  \"duration\": \"30 minutos\",\n  \"videoUrl\": \"https://example.com/video.mp4\",\n  \"order\": 1,\n  \"free\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/modules/:moduleId/lessons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "modules", ":moduleId", "lessons"],
+							"variable": [
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Aula (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Aula Atualizada\",\n  \"duration\": \"45 minutos\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/modules/:moduleId/lessons/:lessonId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "modules", ":moduleId", "lessons", ":lessonId"],
+							"variable": [
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								},
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Aula (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/modules/:moduleId/lessons/:lessonId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "modules", ":moduleId", "lessons", ":lessonId"],
+							"variable": [
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								},
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Reordenar Aulas (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"lessonIds\": [\"lesson-id-1\", \"lesson-id-2\", \"lesson-id-3\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/modules/:moduleId/reorder-lessons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "modules", ":moduleId", "reorder-lessons"],
+							"variable": [
+								{
+									"key": "moduleId",
+									"value": "module-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎓 Aulas",
+			"item": [
+				{
+					"name": "Detalhes da Aula",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/lessons/:lessonId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "lessons", ":lessonId"],
+							"variable": [
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Materiais da Aula",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/lessons/:lessonId/materials",
+							"host": ["{{base_url}}"],
+							"path": ["api", "lessons", ":lessonId", "materials"],
+							"variable": [
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🛒 Carrinho",
+			"item": [
+				{
+					"name": "Obter Carrinho",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cart",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart"]
+						}
+					}
+				},
+				{
+					"name": "Total do Carrinho",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cart/total",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "total"]
+						}
+					}
+				},
+				{
+					"name": "Adicionar ao Carrinho",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": \"course-uuid-here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cart/add",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "add"]
+						}
+					}
+				},
+				{
+					"name": "Aplicar Cupom",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"DESCONTO10\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cart/apply-coupon",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "apply-coupon"]
+						}
+					}
+				},
+				{
+					"name": "Remover Cupom",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cart/remove-coupon",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "remove-coupon"]
+						}
+					}
+				},
+				{
+					"name": "Remover do Carrinho",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cart/remove/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "remove", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Limpar Carrinho",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cart/clear",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cart", "clear"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "💳 Compras",
+			"item": [
+				{
+					"name": "Checkout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseIds\": [\"course-uuid-1\", \"course-uuid-2\"],\n  \"paymentMethod\": \"pix\",\n  \"couponCode\": \"DESCONTO10\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/purchases/checkout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "purchases", "checkout"]
+						}
+					}
+				},
+				{
+					"name": "Confirmar Pagamento",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentId\": \"payment-id-mercadopago\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/purchases/:id/confirm",
+							"host": ["{{base_url}}"],
+							"path": ["api", "purchases", ":id", "confirm"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "purchase-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Minhas Compras",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchases/my-purchases",
+							"host": ["{{base_url}}"],
+							"path": ["api", "purchases", "my-purchases"]
+						}
+					}
+				},
+				{
+					"name": "Estatísticas de Compras",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchases/my-purchases/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "purchases", "my-purchases", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Detalhes da Compra",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchases/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "purchases", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "purchase-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Progresso",
+			"item": [
+				{
+					"name": "Progresso no Curso",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/course/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "course", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Meus Cursos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/my-courses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "my-courses"]
+						}
+					}
+				},
+				{
+					"name": "Progresso da Aula",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/lesson/:lessonId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "lesson", ":lessonId"],
+							"variable": [
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Estatísticas de Progresso",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Histórico de Atividades",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/history",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "history"]
+						}
+					}
+				},
+				{
+					"name": "Completar Aula",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/progress/lesson/:lessonId/complete",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "lesson", ":lessonId", "complete"],
+							"variable": [
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Tempo Assistido",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"watchedDuration\": 300\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/progress/lesson/:lessonId/watch",
+							"host": ["{{base_url}}"],
+							"path": ["api", "progress", "lesson", ":lessonId", "watch"],
+							"variable": [
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⭐ Avaliações",
+			"item": [
+				{
+					"name": "Avaliações do Curso",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/reviews/course/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", "course", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Criar Avaliação",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": \"course-uuid-here\",\n  \"rating\": 5,\n  \"comment\": \"Excelente curso!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "Marcar como Útil",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews/:id/helpful",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", ":id", "helpful"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Adicionar Imagens à Avaliação",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"images\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/reviews/:id/images",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", ":id", "images"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Todas (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "Avaliações Pendentes (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews/pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", "pending"]
+						}
+					}
+				},
+				{
+					"name": "Estatísticas de Avaliações (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Aprovar Avaliação (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews/:id/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", ":id", "approve"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Avaliação (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "review-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎟️ Cupons",
+			"item": [
+				{
+					"name": "Validar Cupom",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/coupons/validate/:code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", "validate", ":code"],
+							"variable": [
+								{
+									"key": "code",
+									"value": "DESCONTO10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Cupons (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/coupons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons"]
+						}
+					}
+				},
+				{
+					"name": "Detalhes do Cupom (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/coupons/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "coupon-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Uso do Cupom (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/coupons/:code/usage",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", ":code", "usage"],
+							"variable": [
+								{
+									"key": "code",
+									"value": "DESCONTO10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Criar Cupom (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"DESCONTO10\",\n  \"discount\": 10,\n  \"type\": \"percentage\",\n  \"expiresAt\": \"2024-12-31T23:59:59Z\",\n  \"maxUses\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/coupons",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons"]
+						}
+					}
+				},
+				{
+					"name": "Atualizar Cupom (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"discount\": 15,\n  \"maxUses\": 200\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/coupons/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "coupon-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Ativar/Desativar Cupom (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/coupons/:id/toggle",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", ":id", "toggle"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "coupon-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Cupom (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/coupons/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "coupons", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "coupon-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏆 Certificados",
+			"item": [
+				{
+					"name": "Meus Certificados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/certificates",
+							"host": ["{{base_url}}"],
+							"path": ["api", "certificates"]
+						}
+					}
+				},
+				{
+					"name": "Detalhes do Certificado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/certificates/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "certificates", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "certificate-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Download PDF do Certificado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/certificates/:id/download",
+							"host": ["{{base_url}}"],
+							"path": ["api", "certificates", ":id", "download"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "certificate-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Gerar Certificado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/certificates/generate/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "certificates", "generate", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Verificar Certificado (Público)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/verify/:code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "certificates", "verify", ":code"],
+							"variable": [
+								{
+									"key": "code",
+									"value": "VERIFICATION_CODE"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "❤️ Favoritos",
+			"item": [
+				{
+					"name": "Listar Favoritos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites"]
+						}
+					}
+				},
+				{
+					"name": "Adicionar Favorito",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Remover Favorito",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Verificar se é Favorito",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/check/:courseId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", "check", ":courseId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notificações",
+			"item": [
+				{
+					"name": "Listar Notificações",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications?unreadOnly=false",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{
+									"key": "unreadOnly",
+									"value": "false"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Marcar como Lida",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/:id/read",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", ":id", "read"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "notification-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Marcar Todas como Lidas",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/read-all",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", "read-all"]
+						}
+					}
+				},
+				{
+					"name": "Deletar Notificação",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "notification-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "💰 Reembolsos",
+			"item": [
+				{
+					"name": "Solicitar Reembolso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"purchaseId\": \"purchase-uuid-here\",\n  \"reason\": \"Não atendeu minhas expectativas\",\n  \"comment\": \"Comentário adicional\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/refunds/request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "refunds", "request"]
+						}
+					}
+				},
+				{
+					"name": "Meus Reembolsos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/refunds/my-refunds",
+							"host": ["{{base_url}}"],
+							"path": ["api", "refunds", "my-refunds"]
+						}
+					}
+				},
+				{
+					"name": "Listar Reembolsos (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/refunds?status=pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "refunds"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Aprovar Reembolso (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/refunds/:id/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "refunds", ":id", "approve"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "refund-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Rejeitar Reembolso (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Prazo de garantia expirado\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/refunds/:id/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "refunds", ":id", "reject"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "refund-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎯 Recomendações",
+			"item": [
+				{
+					"name": "Recomendações Personalizadas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Cursos em Alta (Público)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/trending?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "trending"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👨‍💼 Admin",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Gráfico de Vendas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/sales-chart?period=30",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "dashboard", "sales-chart"],
+							"query": [
+								{
+									"key": "period",
+									"value": "30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Gráfico de Receita",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/revenue-chart?period=30",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "dashboard", "revenue-chart"],
+							"query": [
+								{
+									"key": "period",
+									"value": "30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Gráfico de Alunos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/students-chart?period=30",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "dashboard", "students-chart"],
+							"query": [
+								{
+									"key": "period",
+									"value": "30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Gráfico de Métodos de Pagamento",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/dashboard/payment-methods-chart",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "dashboard", "payment-methods-chart"]
+						}
+					}
+				},
+				{
+					"name": "Receita",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/revenue?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "revenue"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Analytics - Visão Geral",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/analytics/overview",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "analytics", "overview"]
+						}
+					}
+				},
+				{
+					"name": "Analytics - Progresso dos Alunos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/analytics/student-progress",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "analytics", "student-progress"]
+						}
+					}
+				},
+				{
+					"name": "Exportar Compras",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"format\": \"csv\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/export/purchases",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "export", "purchases"]
+						}
+					}
+				},
+				{
+					"name": "Exportar Alunos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"format\": \"xlsx\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/export/students",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "export", "students"]
+						}
+					}
+				},
+				{
+					"name": "Exportar Cursos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"format\": \"csv\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/export/courses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "export", "courses"]
+						}
+					}
+				},
+				{
+					"name": "Upload Vídeo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "video",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/upload-video",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "upload-video"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Imagem",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/upload-image",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "upload-image"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Material",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "material",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "lessonId",
+									"value": "lesson-uuid-here",
+									"type": "text"
+								},
+								{
+									"key": "title",
+									"value": "Material de Apoio",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Descrição do material",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/upload-material",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "upload-material"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Materiais do Curso",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/materials",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "materials"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Deletar Material",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/materials/:materialId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "materials", ":materialId"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								},
+								{
+									"key": "materialId",
+									"value": "material-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Reordenar Módulos",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"moduleIds\": [\"module-id-1\", \"module-id-2\", \"module-id-3\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/reorder-modules",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "reorder-modules"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Duplicar Curso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/courses/:courseId/duplicate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "courses", ":courseId", "duplicate"],
+							"variable": [
+								{
+									"key": "courseId",
+									"value": "course-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Alunos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/students?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "students"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Listar Compras",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/purchases?page=1&limit=10&status=paid",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "purchases"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "paid"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔗 Webhooks",
+			"item": [
+				{
+					"name": "Mercado Pago Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"payment\",\n  \"data\": {\n    \"id\": \"payment-id\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/mercadopago",
+							"host": ["{{base_url}}"],
+							"path": ["api", "webhooks", "mercadopago"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏥 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3001",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
