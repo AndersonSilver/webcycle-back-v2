@@ -25,10 +25,13 @@ COPY package*.json ./
 COPY yarn.lock* ./
 
 # Instalar dependências (sem --frozen-lockfile se yarn.lock não existir)
+# Com retry e timeout aumentado para problemas de rede
 RUN if [ -f yarn.lock ]; then \
-      yarn install --frozen-lockfile; \
+      yarn install --frozen-lockfile --network-timeout 100000 --network-concurrency 1 || \
+      yarn install --frozen-lockfile --network-timeout 100000 --network-concurrency 1; \
     else \
-      yarn install; \
+      yarn install --network-timeout 100000 --network-concurrency 1 || \
+      yarn install --network-timeout 100000 --network-concurrency 1; \
     fi
 
 # Copiar código fonte
@@ -64,10 +67,13 @@ COPY package*.json ./
 COPY yarn.lock* ./
 
 # Instalar apenas dependências de produção
+# Com retry e timeout aumentado para problemas de rede
 RUN if [ -f yarn.lock ]; then \
-      yarn install --production --frozen-lockfile; \
+      yarn install --production --frozen-lockfile --network-timeout 100000 --network-concurrency 1 || \
+      yarn install --production --frozen-lockfile --network-timeout 100000 --network-concurrency 1; \
     else \
-      yarn install --production; \
+      yarn install --production --network-timeout 100000 --network-concurrency 1 || \
+      yarn install --production --network-timeout 100000 --network-concurrency 1; \
     fi
 
 # Copiar código compilado do estágio builder
