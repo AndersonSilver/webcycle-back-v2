@@ -14,7 +14,7 @@ passport.use(
       clientSecret: env.googleClientSecret,
       callbackURL: env.googleCallbackUrl,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (_accessToken, _refreshToken, profile, done) => {
       try {
         const userRepository = AppDataSource.getRepository(User);
 
@@ -32,16 +32,16 @@ passport.use(
           if (user) {
             // Atualizar usuário existente com Google ID
             user.googleId = profile.id;
-            user.avatar = profile.photos?.[0]?.value || null;
+            user.avatar = profile.photos?.[0]?.value || undefined;
             user.emailVerified = true;
             await userRepository.save(user);
           } else {
             // Criar novo usuário
             user = userRepository.create({
-              name: profile.displayName,
+              name: profile.displayName || '',
               email: profile.emails?.[0]?.value || '',
               googleId: profile.id,
-              avatar: profile.photos?.[0]?.value || null,
+              avatar: profile.photos?.[0]?.value || undefined,
               emailVerified: true,
               role: UserRole.STUDENT,
             });
@@ -59,7 +59,7 @@ passport.use(
 
         return done(null, user);
       } catch (error) {
-        return done(error, null);
+        return done(error as Error, false);
       }
     }
   )

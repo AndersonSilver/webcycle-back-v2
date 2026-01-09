@@ -697,6 +697,49 @@ class EmailService {
   /**
    * Email de notificação genérico (para NotificationService)
    */
+  /**
+   * Email de reset de senha
+   */
+  async sendPasswordResetEmail(userEmail: string, resetToken: string): Promise<void> {
+    const trackingId = uuidv4();
+    const resetUrl = `${env.frontendUrl || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    
+    const content = `
+      <p>Olá,</p>
+      <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
+      
+      <div class="info-box">
+        <p>Clique no botão abaixo para redefinir sua senha:</p>
+      </div>
+      
+      <p><strong>⚠️ Importante:</strong></p>
+      <ul>
+        <li>Este link expira em 1 hora</li>
+        <li>Se você não solicitou esta redefinição, ignore este email</li>
+        <li>Nunca compartilhe este link com ninguém</li>
+      </ul>
+      
+      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+    `;
+
+    const html = this.getBaseTemplate(
+      '#dc2626',
+      '#b91c1c',
+      'Redefinir Senha',
+      content,
+      'Redefinir Senha',
+      resetUrl,
+      '#dc2626'
+    );
+
+    await this.sendEmail({
+      to: userEmail,
+      subject: 'Redefinir sua senha 🔐',
+      html,
+      trackingId,
+    });
+  }
+
   async sendNotificationEmail(
     userEmail: string,
     userName: string,

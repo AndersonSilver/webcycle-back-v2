@@ -187,15 +187,15 @@ export class ProgressController {
       if (courseProgress === 100 && allLessons.length === completedLessons.length) {
         try {
           const { emailService } = await import('../services/EmailService');
-          const user = await this.userRepository.findOne({ where: { id: user.id } });
-          if (user) {
+          const userForEmail = await this.userRepository.findOne({ where: { id: user.id } });
+          if (userForEmail) {
             await emailService.sendCourseCompletionEmail(
-              user.email,
-              user.name,
+              userForEmail.email,
+              userForEmail.name,
               course.title,
               courseId
             );
-            console.log(`📧 Email de conclusão de curso enviado para: ${user.email}`);
+            console.log(`📧 Email de conclusão de curso enviado para: ${userForEmail.email}`);
           }
         } catch (emailError) {
           console.error('Erro ao enviar email de conclusão:', emailError);

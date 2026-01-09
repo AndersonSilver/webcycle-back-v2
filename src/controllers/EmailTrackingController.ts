@@ -1,5 +1,4 @@
 import { Request, Response, Router } from 'express';
-import { AppDataSource } from '../config/database.config';
 
 // Interface para tracking de emails (pode ser expandida para usar uma tabela no futuro)
 interface EmailTracking {

@@ -208,9 +208,9 @@ export class AdminController {
           sales: salesByDate[date],
         }));
 
-      res.json({ chartData, period: days });
+      return res.json({ chartData, period: days });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   }
 
@@ -246,9 +246,9 @@ export class AdminController {
           revenue: revenueByDate[date],
         }));
 
-      res.json({ chartData, period: days });
+      return res.json({ chartData, period: days });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   }
 
@@ -284,9 +284,9 @@ export class AdminController {
           students: studentsByDate[date],
         }));
 
-      res.json({ chartData, period: days });
+      return res.json({ chartData, period: days });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   }
 
