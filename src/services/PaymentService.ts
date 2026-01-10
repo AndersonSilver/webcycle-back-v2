@@ -436,6 +436,56 @@ export class PaymentService {
     }
   }
 
+  /**
+   * Busca detalhes de uma merchant_order no Mercado Pago
+   * @param merchantOrderId ID da merchant_order
+   * @returns Detalhes da merchant_order incluindo payment_ids
+   */
+  async getMerchantOrderDetails(merchantOrderId: string): Promise<any> {
+    try {
+      // Extrair ID da URL se for uma URL completa
+      let orderId = merchantOrderId;
+      if (merchantOrderId.includes('merchant_orders/')) {
+        const match = merchantOrderId.match(/merchant_orders\/(\d+)/);
+        if (match) {
+          orderId = match[1];
+        }
+      }
+
+      // Buscar merchant_order via API REST do Mercado Pago
+      const response = await fetch(
+        `https://api.mercadopago.com/merchant_orders/${orderId}?access_token=${env.mercadopagoAccessToken}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar merchant_order: ${response.statusText}`);
+      }
+
+      const merchantOrder = await response.json();
+
+      return {
+        id: merchantOrder.id,
+        status: merchantOrder.status,
+        external_reference: merchantOrder.external_reference, // ✅ purchaseId
+        preference_id: merchantOrder.preference_id,
+        payments: merchantOrder.payments || [], // ✅ Array de payment_ids
+        order_status: merchantOrder.order_status,
+        total_amount: merchantOrder.total_amount,
+        paid_amount: merchantOrder.paid_amount,
+        date_created: merchantOrder.date_created,
+        last_updated: merchantOrder.last_updated,
+      };
+    } catch (error: any) {
+      throw new Error(`Erro ao buscar merchant_order: ${error.message}`);
+    }
+  }
+
     async processCardPayment(data: ProcessCardPaymentData): Promise<PaymentResult> {
       try {
         // Validações
