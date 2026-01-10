@@ -9,12 +9,21 @@ export class WebhookController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
   private paymentService: PaymentService;
+  // Cache para evitar processar o mesmo payment_id múltiplas vezes em sequência
+  private processedPayments: Set<string> = new Set();
+  private lastEmailSent: number = 0;
+  private readonly EMAIL_RATE_LIMIT_MS = 600; // 600ms = ~1.6 emails/segundo (abaixo do limite de 2/segundo)
 
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
     this.paymentService = new PaymentService();
     this.setupRoutes();
+    
+    // Limpar cache de payments processados a cada 5 minutos
+    setInterval(() => {
+      this.processedPayments.clear();
+    }, 5 * 60 * 1000);
   }
 
   private setupRoutes() {
@@ -110,11 +119,33 @@ export class WebhookController {
           
           // Processar cada payment_id encontrado na merchant_order
           if (merchantOrder.payments && merchantOrder.payments.length > 0) {
+            // Filtrar payments únicos para evitar processamento duplicado
+            const uniquePaymentIds = new Set<string>();
             for (const paymentInfo of merchantOrder.payments) {
               const paymentIdFromOrder = paymentInfo.id?.toString() || paymentInfo.toString();
               if (paymentIdFromOrder) {
-                console.log(`💳 Processando payment_id da merchant_order: ${paymentIdFromOrder}`);
-                await this.processPayment(paymentIdFromOrder);
+                uniquePaymentIds.add(paymentIdFromOrder);
+              }
+            }
+            
+            console.log(`💳 Processando ${uniquePaymentIds.size} payment(s) único(s) da merchant_order`);
+            
+            for (const paymentIdFromOrder of uniquePaymentIds) {
+              // Verificar se já foi processado recentemente
+              if (this.processedPayments.has(paymentIdFromOrder)) {
+                console.log(`⏭️  Payment ${paymentIdFromOrder} já foi processado recentemente, pulando...`);
+                continue;
+              }
+              
+              console.log(`💳 Processando payment_id da merchant_order: ${paymentIdFromOrder}`);
+              await this.processPayment(paymentIdFromOrder);
+              
+              // Marcar como processado
+              this.processedPayments.add(paymentIdFromOrder);
+              
+              // Delay entre processamentos para evitar rate limit (se houver múltiplos payments)
+              if (uniquePaymentIds.size > 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
               }
             }
           } else {
@@ -270,6 +301,16 @@ export class WebhookController {
       // Se pagamento foi aprovado, enviar email de confirmação
       if (status === PaymentStatus.PAID) {
         try {
+          // Rate limiting para envio de emails (máximo 2 por segundo)
+          const now = Date.now();
+          const timeSinceLastEmail = now - this.lastEmailSent;
+          
+          if (timeSinceLastEmail < this.EMAIL_RATE_LIMIT_MS) {
+            const waitTime = this.EMAIL_RATE_LIMIT_MS - timeSinceLastEmail;
+            console.log(`⏳ Rate limit: aguardando ${waitTime}ms antes de enviar email...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
           // Buscar compra completa com relacionamentos
           const completePurchase = await this.purchaseRepository.findOne({
             where: { id: purchase.id },
@@ -277,6 +318,13 @@ export class WebhookController {
           });
 
           if (completePurchase && completePurchase.user && completePurchase.courses) {
+            // Verificar se já foi enviado email para esta compra recentemente
+            const purchaseKey = `email_${purchase.id}`;
+            if (this.processedPayments.has(purchaseKey)) {
+              console.log(`⏭️  Email já foi enviado para compra ${purchase.id}, pulando...`);
+              return;
+            }
+            
             const courses = completePurchase.courses
               .filter((pc) => pc.course)
               .map((pc) => {
@@ -301,6 +349,11 @@ export class WebhookController {
               courses,
               totalAmount
             );
+            
+            // Marcar como enviado e atualizar timestamp
+            this.processedPayments.add(purchaseKey);
+            this.lastEmailSent = Date.now();
+            
             console.log(`📧 Email de confirmação enviado para: ${completePurchase.user.email}`);
           }
         } catch (emailError) {
