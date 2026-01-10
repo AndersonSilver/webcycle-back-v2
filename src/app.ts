@@ -41,9 +41,17 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// Configurar CORS do Socket.io: suporta múltiplas origens separadas por vírgula
+const socketCorsOrigin = env.corsOrigin 
+  ? env.corsOrigin.includes(',') 
+    ? env.corsOrigin.split(',').map((origin: string) => origin.trim())
+    : env.corsOrigin
+  : env.frontendUrl || 'http://localhost:5173';
+
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: env.frontendUrl || 'http://localhost:5173',
+    origin: socketCorsOrigin,
     credentials: true,
   },
 });
