@@ -93,14 +93,22 @@ export class PaymentService {
       payer: {
         email: data.payerEmail,
         first_name: data.payerName.split(' ')[0],
-        last_name: data.payerName.split(' ').slice(1).join(' ') || '',
+        last_name: data.payerName.split(' ').slice(1).join(' ') || data.payerName.split(' ')[0],
       },
+      external_reference: data.purchaseId, // ✅ Adicionar external_reference para conciliação
       metadata: {
         purchase_id: data.purchaseId,
       },
     };
 
     const result = await payment.create({ body: paymentData });
+
+    console.log('🔍 PIX criado:', {
+      id: result.id,
+      status: result.status,
+      hasQrCode: !!result.point_of_interaction?.transaction_data?.qr_code,
+      qrCode: result.point_of_interaction?.transaction_data?.qr_code?.substring(0, 50) + '...',
+    });
 
     return {
       id: result.id?.toString() || '',
