@@ -52,7 +52,102 @@ export class WebhookController {
       // Formato 3: Query params com ?data.id=123&type=payment
       // Formato 4: Body com { resource: "123", topic: "payment" }
       // Formato 5: Query params com ?id=123&topic=payment
+      // Formato 6: Body com { resource: "https://.../merchant_orders/123", topic: "merchant_order" }
+      // Formato 7: Query params com ?id=123&topic=merchant_order
       
+      // Extrair topic do body ou query params
+      const topicFromBody = data.topic;
+      const topicFromQuery = query.topic?.toString();
+      const topic = topicFromBody || topicFromQuery;
+      
+      console.log(`🔍 [DEBUG] Topic detectado:`, { 
+        topicFromBody, 
+        topicFromQuery, 
+        finalTopic: topic,
+        isMerchantOrder: topic === 'merchant_order'
+      });
+      
+      // Se for merchant_order, processar de forma diferente
+      if (topic === 'merchant_order') {
+        console.log('✅ [DEBUG] Entrando no bloco merchant_order');
+        let merchantOrderId: string | null = null;
+        
+        // Extrair ID da merchant_order
+        if (data.resource) {
+          // Pode ser URL completa ou apenas ID
+          if (typeof data.resource === 'string' && data.resource.includes('merchant_orders/')) {
+            const match = data.resource.match(/merchant_orders\/(\d+)/);
+            if (match) {
+              merchantOrderId = match[1];
+            }
+          } else if (typeof data.resource === 'string' && !data.resource.includes('http')) {
+            merchantOrderId = data.resource;
+          }
+        }
+        
+        // Tentar query params
+        if (!merchantOrderId && query.id) {
+          merchantOrderId = query.id.toString();
+        }
+        
+        if (!merchantOrderId) {
+          console.warn('⚠️ Webhook merchant_order recebido mas ID não encontrado:', { body: data, query });
+          return;
+        }
+        
+        console.log(`🔍 Processando merchant_order: ${merchantOrderId}`);
+        
+        try {
+          // Buscar detalhes da merchant_order
+          const merchantOrder = await this.paymentService.getMerchantOrderDetails(merchantOrderId);
+          
+          console.log(`📦 Merchant Order encontrada:`, {
+            id: merchantOrder.id,
+            status: merchantOrder.status,
+            external_reference: merchantOrder.external_reference,
+            payments: merchantOrder.payments?.length || 0,
+          });
+          
+          // Processar cada payment_id encontrado na merchant_order
+          if (merchantOrder.payments && merchantOrder.payments.length > 0) {
+            for (const paymentInfo of merchantOrder.payments) {
+              const paymentIdFromOrder = paymentInfo.id?.toString() || paymentInfo.toString();
+              if (paymentIdFromOrder) {
+                console.log(`💳 Processando payment_id da merchant_order: ${paymentIdFromOrder}`);
+                await this.processPayment(paymentIdFromOrder);
+              }
+            }
+          } else {
+            // Se não há payments ainda, usar external_reference para encontrar a compra
+            if (merchantOrder.external_reference) {
+              console.log(`🔍 Merchant order sem payments ainda, buscando compra pelo external_reference: ${merchantOrder.external_reference}`);
+              const purchase = await this.purchaseRepository.findOne({
+                where: { id: merchantOrder.external_reference },
+              });
+              
+              if (purchase) {
+                console.log(`✅ Compra encontrada pelo external_reference: ${purchase.id}`);
+                // Atualizar status baseado no status da merchant_order
+                let status: PaymentStatus = PaymentStatus.PENDING;
+                if (merchantOrder.status === 'closed') {
+                  status = PaymentStatus.PAID;
+                } else if (merchantOrder.status === 'expired') {
+                  status = PaymentStatus.FAILED;
+                }
+                
+                await this.purchaseRepository.update(purchase.id, { paymentStatus: status });
+                console.log(`✅ Status da compra ${purchase.id} atualizado para: ${status}`);
+              }
+            }
+          }
+        } catch (error: any) {
+          console.error(`❌ Erro ao processar merchant_order ${merchantOrderId}:`, error.message);
+        }
+        
+        return; // Já processamos o merchant_order, não precisa continuar
+      }
+      
+      // Processamento normal para webhooks de payment
       let paymentId: string | null = null;
       
       // Tentar extrair paymentId do body primeiro
@@ -85,132 +180,140 @@ export class WebhookController {
       }
 
       console.log(`🔍 Buscando pagamento: ${paymentId}`);
-
-      // Buscar compra pelo paymentId (pode ser payment_id ou pref_id)
-      let purchase = await this.purchaseRepository.findOne({
-        where: { paymentId: paymentId },
-      });
-
-      // Se não encontrar, pode ser que a compra tenha um pref_id salvo mas o webhook enviou um payment_id
-      // Nesse caso, precisamos buscar o pagamento no Mercado Pago para obter o external_reference (purchaseId)
-      if (!purchase) {
-        console.log(`⚠️ Compra não encontrada com paymentId: ${paymentId}. Buscando pagamento no Mercado Pago...`);
-        
-        try {
-          // Buscar detalhes do pagamento no Mercado Pago
-          const paymentDetails = await this.paymentService.getPaymentDetails(paymentId);
-          
-          // Obter external_reference (que é o purchaseId)
-          const purchaseIdFromPayment = paymentDetails.external_reference || paymentDetails.metadata?.purchase_id;
-          
-          if (purchaseIdFromPayment) {
-            console.log(`🔍 Encontrado purchaseId no pagamento: ${purchaseIdFromPayment}`);
-            
-            // Buscar compra pelo purchaseId
-            purchase = await this.purchaseRepository.findOne({
-              where: { id: purchaseIdFromPayment },
-            });
-            
-            if (purchase) {
-              console.log(`✅ Compra encontrada pelo purchaseId: ${purchase.id}`);
-            } else {
-              console.warn(`⚠️ Compra não encontrada com purchaseId: ${purchaseIdFromPayment}`);
-            }
-          } else {
-            // Tentar buscar pelo metadata do pagamento (pode conter purchase_id)
-            const purchaseIdFromMetadata = paymentDetails.metadata?.purchase_id;
-            if (purchaseIdFromMetadata) {
-              console.log(`🔍 Tentando buscar compra pelo metadata.purchase_id: ${purchaseIdFromMetadata}`);
-              purchase = await this.purchaseRepository.findOne({
-                where: { id: purchaseIdFromMetadata },
-              });
-              
-              if (purchase) {
-                console.log(`✅ Compra encontrada pelo metadata.purchase_id: ${purchase.id}`);
-              }
-            }
-          }
-        } catch (error: any) {
-          console.error(`❌ Erro ao buscar pagamento no Mercado Pago:`, error.message);
-          // Continuar mesmo se não conseguir buscar (pode ser que o pagamento ainda não exista)
-        }
-      }
-
-      if (purchase) {
-        console.log(`✅ Compra encontrada: ${purchase.id}`);
-        
-        // Buscar status atual do pagamento
-        const paymentStatus = await this.paymentService.getPaymentStatus(paymentId);
-        console.log(`📊 Status do pagamento: ${paymentStatus}`);
-
-        let status: PaymentStatus = PaymentStatus.PENDING;
-
-        if (paymentStatus === 'approved') {
-          status = PaymentStatus.PAID;
-        } else if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') {
-          status = PaymentStatus.FAILED;
-        } else if (paymentStatus === 'refunded') {
-          status = PaymentStatus.REFUNDED;
-        }
-
-        await this.purchaseRepository.update(purchase.id, { 
-          paymentStatus: status,
-          paymentId: paymentId, // Atualiza com o payment_id real se for diferente
-        });
-
-        console.log(`✅ Status da compra ${purchase.id} atualizado para: ${status}`);
-
-        // Se pagamento foi aprovado, enviar email de confirmação
-        if (status === PaymentStatus.PAID) {
-          try {
-            // Buscar compra completa com relacionamentos
-            const completePurchase = await this.purchaseRepository.findOne({
-              where: { id: purchase.id },
-              relations: ['user', 'courses', 'courses.course'],
-            });
-
-            if (completePurchase && completePurchase.user && completePurchase.courses) {
-              const courses = completePurchase.courses
-                .filter((pc) => pc.course)
-                .map((pc) => {
-                  const price = typeof pc.course!.price === 'string' 
-                    ? parseFloat(pc.course!.price) 
-                    : pc.course!.price;
-                  return {
-                    title: pc.course!.title,
-                    price: price,
-                  };
-                });
-
-              const totalAmount = completePurchase.totalAmount 
-                ? (typeof completePurchase.totalAmount === 'string' 
-                    ? parseFloat(completePurchase.totalAmount) 
-                    : completePurchase.totalAmount)
-                : courses.reduce((sum, c) => sum + c.price, 0);
-
-              await emailService.sendPurchaseConfirmationEmail(
-                completePurchase.user.email,
-                completePurchase.user.name,
-                courses,
-                totalAmount
-              );
-              console.log(`📧 Email de confirmação enviado para: ${completePurchase.user.email}`);
-            }
-          } catch (emailError) {
-            console.error('Erro ao enviar email de confirmação de compra:', emailError);
-            // Não falhar o webhook se o email falhar
-          }
-        }
-      } else {
-        console.warn(`⚠️ Compra não encontrada para paymentId: ${paymentId}. Webhook pode ser de um pagamento não relacionado a uma compra.`);
-      }
-
-      // Já respondemos 200 no início, então apenas logar
-      console.log(`✅ Webhook processado com sucesso para paymentId: ${paymentId}`);
+      
+      // Processar o pagamento
+      await this.processPayment(paymentId);
     } catch (error: any) {
       console.error('❌ Erro no webhook:', error);
       // Já respondemos 200 no início, então apenas logar o erro
     }
+  }
+
+  /**
+   * Processa um payment_id: busca a compra e atualiza o status
+   */
+  private async processPayment(paymentId: string): Promise<void> {
+    // Buscar compra pelo paymentId (pode ser payment_id ou pref_id)
+    let purchase = await this.purchaseRepository.findOne({
+      where: { paymentId: paymentId },
+    });
+
+    // Se não encontrar, pode ser que a compra tenha um pref_id salvo mas o webhook enviou um payment_id
+    // Nesse caso, precisamos buscar o pagamento no Mercado Pago para obter o external_reference (purchaseId)
+    if (!purchase) {
+      console.log(`⚠️ Compra não encontrada com paymentId: ${paymentId}. Buscando pagamento no Mercado Pago...`);
+      
+      try {
+        // Buscar detalhes do pagamento no Mercado Pago
+        const paymentDetails = await this.paymentService.getPaymentDetails(paymentId);
+        
+        // Obter external_reference (que é o purchaseId)
+        const purchaseIdFromPayment = paymentDetails.external_reference || paymentDetails.metadata?.purchase_id;
+        
+        if (purchaseIdFromPayment) {
+          console.log(`🔍 Encontrado purchaseId no pagamento: ${purchaseIdFromPayment}`);
+          
+          // Buscar compra pelo purchaseId
+          purchase = await this.purchaseRepository.findOne({
+            where: { id: purchaseIdFromPayment },
+          });
+          
+          if (purchase) {
+            console.log(`✅ Compra encontrada pelo purchaseId: ${purchase.id}`);
+          } else {
+            console.warn(`⚠️ Compra não encontrada com purchaseId: ${purchaseIdFromPayment}`);
+          }
+        } else {
+          // Tentar buscar pelo metadata do pagamento (pode conter purchase_id)
+          const purchaseIdFromMetadata = paymentDetails.metadata?.purchase_id;
+          if (purchaseIdFromMetadata) {
+            console.log(`🔍 Tentando buscar compra pelo metadata.purchase_id: ${purchaseIdFromMetadata}`);
+            purchase = await this.purchaseRepository.findOne({
+              where: { id: purchaseIdFromMetadata },
+            });
+            
+            if (purchase) {
+              console.log(`✅ Compra encontrada pelo metadata.purchase_id: ${purchase.id}`);
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error(`❌ Erro ao buscar pagamento no Mercado Pago:`, error.message);
+        // Continuar mesmo se não conseguir buscar (pode ser que o pagamento ainda não exista)
+      }
+    }
+
+    if (purchase) {
+      console.log(`✅ Compra encontrada: ${purchase.id}`);
+      
+      // Buscar status atual do pagamento
+      const paymentStatus = await this.paymentService.getPaymentStatus(paymentId);
+      console.log(`📊 Status do pagamento: ${paymentStatus}`);
+
+      let status: PaymentStatus = PaymentStatus.PENDING;
+
+      if (paymentStatus === 'approved') {
+        status = PaymentStatus.PAID;
+      } else if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') {
+        status = PaymentStatus.FAILED;
+      } else if (paymentStatus === 'refunded') {
+        status = PaymentStatus.REFUNDED;
+      }
+
+      await this.purchaseRepository.update(purchase.id, { 
+        paymentStatus: status,
+        paymentId: paymentId, // Atualiza com o payment_id real se for diferente
+      });
+
+      console.log(`✅ Status da compra ${purchase.id} atualizado para: ${status}`);
+
+      // Se pagamento foi aprovado, enviar email de confirmação
+      if (status === PaymentStatus.PAID) {
+        try {
+          // Buscar compra completa com relacionamentos
+          const completePurchase = await this.purchaseRepository.findOne({
+            where: { id: purchase.id },
+            relations: ['user', 'courses', 'courses.course'],
+          });
+
+          if (completePurchase && completePurchase.user && completePurchase.courses) {
+            const courses = completePurchase.courses
+              .filter((pc) => pc.course)
+              .map((pc) => {
+                const price = typeof pc.course!.price === 'string' 
+                  ? parseFloat(pc.course!.price) 
+                  : pc.course!.price;
+                return {
+                  title: pc.course!.title,
+                  price: price,
+                };
+              });
+
+            const totalAmount = completePurchase.totalAmount 
+              ? (typeof completePurchase.totalAmount === 'string' 
+                  ? parseFloat(completePurchase.totalAmount) 
+                  : completePurchase.totalAmount)
+              : courses.reduce((sum, c) => sum + c.price, 0);
+
+            await emailService.sendPurchaseConfirmationEmail(
+              completePurchase.user.email,
+              completePurchase.user.name,
+              courses,
+              totalAmount
+            );
+            console.log(`📧 Email de confirmação enviado para: ${completePurchase.user.email}`);
+          }
+        } catch (emailError) {
+          console.error('Erro ao enviar email de confirmação de compra:', emailError);
+          // Não falhar o webhook se o email falhar
+        }
+      }
+    } else {
+      console.warn(`⚠️ Compra não encontrada para paymentId: ${paymentId}. Webhook pode ser de um pagamento não relacionado a uma compra.`);
+    }
+
+    // Já respondemos 200 no início, então apenas logar
+    console.log(`✅ Webhook processado com sucesso para paymentId: ${paymentId}`);
   }
 
   public getRouter(): Router {
