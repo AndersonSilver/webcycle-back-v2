@@ -51,12 +51,16 @@ const io = new SocketIOServer(httpServer, {
 const PORT = env.port;
 
 // Middlewares
-app.use(
-  cors({
-    origin: env.corsOrigin || true, // Usa CORS_ORIGIN do .env ou permite qualquer origem
-    credentials: true,
-  })
-);
+// Configurar CORS: suporta múltiplas origens separadas por vírgula
+const corsOptions = {
+  origin: env.corsOrigin 
+    ? env.corsOrigin.includes(',') 
+      ? env.corsOrigin.split(',').map((origin: string) => origin.trim())
+      : env.corsOrigin
+    : true, // Se não definido, permite qualquer origem
+  credentials: true,
+};
+app.use(cors(corsOptions));
 
 // Middleware para pular página de aviso do ngrok (para webhooks)
 app.use((_req: Request, res: Response, next: NextFunction) => {
