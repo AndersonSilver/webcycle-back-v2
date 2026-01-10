@@ -194,7 +194,7 @@ export class PurchaseController {
       );
       await this.purchaseCourseRepository.save(purchaseCourses);
 
-      // Criar pagamento
+      // Criar pagamento com informações completas para melhorar aprovação do Mercado Pago
       const payment = await this.paymentService.createPayment({
         amount: finalAmount,
         description: `Compra de ${courses.length} curso(s)`,
@@ -202,6 +202,15 @@ export class PurchaseController {
         paymentMethod,
         payerEmail: user.email,
         payerName: user.name,
+        // ✅ Passar informações dos cursos para melhorar detalhamento (26 pontos)
+        courses: courses.map(course => ({
+          id: course.id,
+          title: course.title,
+          description: course.description || course.subtitle || `Curso: ${course.title}`,
+          price: Number(course.price),
+          category: course.category,
+          quantity: 1, // Cada curso tem quantidade 1
+        })),
       });
 
       // Atualizar compra com ID do pagamento

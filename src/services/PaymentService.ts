@@ -22,6 +22,29 @@ export interface PaymentData {
   paymentMethod: PaymentMethod;
   payerEmail: string;
   payerName: string;
+  // Informações adicionais do comprador (opcionais, mas melhoram aprovação)
+  payerAddress?: {
+    street_name?: string;
+    street_number?: number;
+    zip_code?: string;
+  };
+  payerPhone?: {
+    area_code?: string;
+    number?: string;
+  };
+  payerIdentification?: {
+    type?: string; // CPF, CNPJ
+    number?: string;
+  };
+  // Informações dos cursos para melhorar detalhamento
+  courses?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    category: string;
+    quantity?: number;
+  }>;
 }
 
 export interface PaymentResult {
@@ -153,28 +176,82 @@ export class PaymentService {
     const firstName = nameParts[0] || 'Cliente';
     const lastName = nameParts.slice(1).join(' ') || firstName;
 
-    const preferenceData: any = {
-      items: [
-        {
+    // Mapear categoria para category_id do Mercado Pago
+    // Categorias comuns: art, electronics, fashion, food, home, services, etc.
+    const mapCategoryToMercadoPago = (category: string): string => {
+      const categoryMap: Record<string, string> = {
+        'psicologia': 'services',
+        'saude': 'services',
+        'educacao': 'services',
+        'curso': 'services',
+        'online': 'services',
+        'e-learning': 'services',
+      };
+      return categoryMap[category.toLowerCase()] || 'services';
+    };
+
+    // Construir items da preferência
+    // Se temos informações dos cursos, criar um item por curso
+    // Caso contrário, criar um item único
+    const items = data.courses && data.courses.length > 0
+      ? data.courses.map((course) => ({
+          id: course.id, // ✅ Código do item (4 pontos)
+          title: (course.title || 'Curso').substring(0, 127).trim() || 'Curso', // ✅ Nome do item (4 pontos)
+          description: (course.description || 'Compra de curso').substring(0, 127).trim() || 'Compra de curso', // ✅ Descrição do item (3 pontos)
+          quantity: course.quantity || 1, // ✅ Quantidade do produto (5 pontos)
+          unit_price: parseFloat(Number(course.price).toFixed(2)), // ✅ Preço do item (6 pontos)
+          category_id: mapCategoryToMercadoPago(course.category), // ✅ Categoria do item (4 pontos)
+          currency_id: 'BRL',
+        }))
+      : [{
           id: data.purchaseId,
           title: (data.description || 'Curso').substring(0, 127).trim() || 'Curso',
           description: (data.description || 'Compra de curso').substring(0, 127).trim() || 'Compra de curso',
           quantity: 1,
-          unit_price: parseFloat(unitPrice.toFixed(2)), // Garantir número com 2 casas decimais
-          currency_id: 'BRL', // Moeda brasileira
-        },
-      ],
-      payer: {
-        email: payerEmail,
-        name: firstName, // Primeiro nome apenas (obrigatório)
-        surname: lastName, // Sobrenome separado (obrigatório)
-      },
+          unit_price: parseFloat(unitPrice.toFixed(2)),
+          category_id: 'services', // Categoria padrão
+          currency_id: 'BRL',
+        }];
+
+    // Construir objeto payer com informações adicionais
+    const payer: any = {
+      email: payerEmail,
+      name: firstName,
+      surname: lastName, // ✅ Sobrenome do comprador (5 pontos) - já implementado
+    };
+
+    // Adicionar informações opcionais do comprador (boas práticas)
+    if (data.payerAddress) {
+      payer.address = {
+        street_name: data.payerAddress.street_name,
+        street_number: data.payerAddress.street_number,
+        zip_code: data.payerAddress.zip_code,
+      };
+    }
+
+    if (data.payerPhone) {
+      payer.phone = {
+        area_code: data.payerPhone.area_code,
+        number: data.payerPhone.number,
+      };
+    }
+
+    if (data.payerIdentification) {
+      payer.identification = {
+        type: data.payerIdentification.type || 'CPF',
+        number: data.payerIdentification.number,
+      };
+    }
+
+    const preferenceData: any = {
+      items,
+      payer,
       metadata: {
         purchase_id: data.purchaseId,
       },
       // ✅ Campos adicionais para habilitar botão "Pagar" no Checkout Pro
       statement_descriptor: 'WEBCYCLE', // Descrição que aparece na fatura (máx 22 caracteres)
-      external_reference: data.purchaseId, // Referência externa para rastreamento
+      external_reference: data.purchaseId, // ✅ Referência externa (17 pontos) - já implementado
       // Configurações de pagamento
       payment_methods: {
         excluded_payment_types: [], // Não excluir nenhum tipo de pagamento
@@ -190,14 +267,17 @@ export class PaymentService {
       // O Checkout Pro gera seus próprios tokens quando o usuário preenche o cartão
     };
 
-    // Sempre adicionar back_urls (mesmo em localhost, o frontend vai lidar com os parâmetros)
-    // O Mercado Pago pode não aceitar localhost diretamente, mas vamos tentar
-    // Se não funcionar, o usuário pode usar ngrok ou verificar via webhook
+    // ✅ Back URLs melhoradas - usar rotas específicas (4 pontos)
+    // O Mercado Pago redireciona para essas URLs após o pagamento
+    // IMPORTANTE: URLs devem ser HTTPS em produção e acessíveis publicamente
     preferenceData.back_urls = {
-      success: `${frontendUrl}?payment_status=success&pref_id={preference_id}`,
-      failure: `${frontendUrl}?payment_status=failure&pref_id={preference_id}`,
-      pending: `${frontendUrl}?payment_status=pending&pref_id={preference_id}`,
+      success: `${frontendUrl}/purchase/success?pref_id={preference_id}`,
+      failure: `${frontendUrl}/purchase/failure?pref_id={preference_id}`,
+      pending: `${frontendUrl}/purchase/pending?pref_id={preference_id}`,
     };
+    
+    // Garantir que back_urls está sendo enviado (obrigatório para pontuação)
+    console.log('✅ Back URLs configuradas:', preferenceData.back_urls);
     
     // Auto return apenas se não for localhost (Mercado Pago pode não aceitar localhost)
     if (!isLocalhost) {
@@ -216,23 +296,32 @@ export class PaymentService {
       console.warn('⚠️ Sem webhook configurado, você precisará verificar o status do pagamento manualmente ou via back_urls.');
     }
 
+    // Calcular total dos itens
+    const totalAmount = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
     // Log da preferência sendo criada (para debug)
-    console.log('📦 Criando preferência Checkout Pro:', {
+    console.log('📦 Criando preferência Checkout Pro (Mercado Pago Checklist):', {
       items: preferenceData.items.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        unit_price: item.unit_price,
+        id: item.id, // ✅ Código do item
+        title: item.title, // ✅ Nome do item
+        description: item.description, // ✅ Descrição do item
+        unit_price: item.unit_price, // ✅ Preço do item
+        quantity: item.quantity, // ✅ Quantidade do produto
+        category_id: item.category_id, // ✅ Categoria do item
         currency_id: item.currency_id,
-        quantity: item.quantity,
       })),
       payer: {
         email: preferenceData.payer.email,
         name: preferenceData.payer.name,
-        surname: preferenceData.payer.surname,
+        surname: preferenceData.payer.surname, // ✅ Sobrenome do comprador
+        hasAddress: !!preferenceData.payer.address,
+        hasPhone: !!preferenceData.payer.phone,
+        hasIdentification: !!preferenceData.payer.identification,
       },
-      amount: preferenceData.items[0]?.unit_price,
-      hasBackUrls: !!preferenceData.back_urls,
+      external_reference: preferenceData.external_reference, // ✅ Referência externa
+      totalAmount,
+      hasBackUrls: !!preferenceData.back_urls, // ✅ Back URLs
+      backUrls: preferenceData.back_urls,
       hasPaymentMethods: !!preferenceData.payment_methods,
       default_installments: preferenceData.payment_methods?.default_installments,
       binary_mode: preferenceData.binary_mode,
