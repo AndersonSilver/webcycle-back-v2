@@ -53,7 +53,7 @@ const PORT = env.port;
 // Middlewares
 app.use(
   cors({
-    origin: true, // Permite qualquer origem
+    origin: env.corsOrigin || true, // Usa CORS_ORIGIN do .env ou permite qualquer origem
     credentials: true,
   })
 );
