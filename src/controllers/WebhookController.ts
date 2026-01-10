@@ -33,6 +33,7 @@ export class WebhookController {
     console.log('🎯 [WEBHOOK CONTROLLER] URL:', req.url);
     console.log('🎯 [WEBHOOK CONTROLLER] Headers:', JSON.stringify(req.headers, null, 2));
     console.log('🎯 [WEBHOOK CONTROLLER] Body:', JSON.stringify(req.body, null, 2));
+    console.log('🎯 [WEBHOOK CONTROLLER] Query:', JSON.stringify(req.query, null, 2));
     
     try {
       // Responder imediatamente para evitar timeout do Mercado Pago
@@ -40,27 +41,46 @@ export class WebhookController {
       res.status(200).json({ received: true });
       
       const data = req.body;
+      const query = req.query;
       
       // Log para debug
       console.log('🔔 Webhook recebido do Mercado Pago:', JSON.stringify(data, null, 2));
 
-      // Mercado Pago pode enviar webhooks em diferentes formatos
-      // Formato 1: { type: 'payment', data: { id: '123' } }
-      // Formato 2: { action: 'payment.updated', data: { id: '123' }, type: 'payment' }
+      // Mercado Pago pode enviar webhooks em diferentes formatos:
+      // Formato 1: Body com { type: 'payment', data: { id: '123' } }
+      // Formato 2: Body com { action: 'payment.created', data: { id: '123' }, type: 'payment' }
+      // Formato 3: Query params com ?data.id=123&type=payment
+      // Formato 4: Body com { resource: "123", topic: "payment" }
+      // Formato 5: Query params com ?id=123&topic=payment
       
       let paymentId: string | null = null;
       
+      // Tentar extrair paymentId do body primeiro
       if (data.type === 'payment') {
-        // Formato padrão
+        // Formato padrão: { type: 'payment', data: { id: '123' } }
         paymentId = data.data?.id?.toString() || data.data_id?.toString();
       } else if (data.action === 'payment.updated' || data.action === 'payment.created') {
-        // Formato alternativo (simulação)
+        // Formato alternativo: { action: 'payment.created', data: { id: '123' } }
         paymentId = data.data?.id?.toString();
+      } else if (data.topic === 'payment' && data.resource) {
+        // Formato: { resource: "123", topic: "payment" }
+        paymentId = typeof data.resource === 'string' && !data.resource.includes('http') 
+          ? data.resource 
+          : null;
+      }
+      
+      // Se não encontrou no body, tentar nos query params
+      if (!paymentId) {
+        if (query['data.id']) {
+          paymentId = query['data.id']?.toString();
+        } else if (query.id && query.topic === 'payment') {
+          paymentId = query.id.toString();
+        }
       }
 
       if (!paymentId) {
-        console.warn('⚠️ Webhook recebido mas paymentId não encontrado:', data);
-        res.status(200).json({ received: true, message: 'Webhook recebido mas paymentId não encontrado' });
+        console.warn('⚠️ Webhook recebido mas paymentId não encontrado:', { body: data, query });
+        // Já respondemos 200 no início, então apenas retornar (não enviar resposta novamente)
         return;
       }
 
