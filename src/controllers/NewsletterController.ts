@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { NewsletterSubscriber } from '../entities/NewsletterSubscriber.entity';
+import { NewsletterCampaign } from '../entities/NewsletterCampaign.entity';
 import { validateDto } from '../middleware/ValidationMiddleware';
 import { SubscribeNewsletterDto, SendNewsletterUpdateDto } from '../dto/newsletter.dto';
 import { emailService } from '../services/EmailService';
@@ -10,10 +11,12 @@ import { AuthMiddleware } from '../middleware/AuthMiddleware';
 export class NewsletterController {
   private router: Router;
   private newsletterRepository: Repository<NewsletterSubscriber>;
+  private campaignRepository: Repository<NewsletterCampaign>;
 
   constructor() {
     this.router = Router();
     this.newsletterRepository = AppDataSource.getRepository(NewsletterSubscriber);
+    this.campaignRepository = AppDataSource.getRepository(NewsletterCampaign);
     this.setupRoutes();
   }
 
@@ -26,6 +29,10 @@ export class NewsletterController {
     this.router.get('/subscribers', AuthMiddleware.authenticate, AuthMiddleware.requireAdmin, this.getSubscribers.bind(this));
     // Rota admin para enviar atualização da newsletter
     this.router.post('/send-update', AuthMiddleware.authenticate, AuthMiddleware.requireAdmin, validateDto(SendNewsletterUpdateDto), this.sendUpdate.bind(this));
+    // Rota admin para listar campanhas (histórico)
+    this.router.get('/campaigns', AuthMiddleware.authenticate, AuthMiddleware.requireAdmin, this.getCampaigns.bind(this));
+    // Rota admin para ver detalhes de uma campanha
+    this.router.get('/campaigns/:id', AuthMiddleware.authenticate, AuthMiddleware.requireAdmin, this.getCampaignDetails.bind(this));
   }
 
   private async subscribe(req: Request, res: Response) {
@@ -147,6 +154,7 @@ export class NewsletterController {
   private async sendUpdate(req: Request, res: Response) {
     try {
       const { subject, content, ctaText, ctaLink } = req.body as SendNewsletterUpdateDto;
+      const userId = (req as any).user?.id;
 
       // Buscar todos os inscritos ativos
       const activeSubscribers = await this.newsletterRepository.find({
@@ -165,6 +173,16 @@ export class NewsletterController {
         name: sub.name,
       }));
 
+      // Criar registro da campanha antes de enviar
+      const campaign = this.campaignRepository.create({
+        subject,
+        content,
+        ctaText,
+        ctaLink,
+        totalRecipients: activeSubscribers.length,
+        sentByUserId: userId,
+      });
+
       // Enviar emails em massa
       const result = await emailService.sendNewsletterBulkUpdate(
         subscribersList,
@@ -174,8 +192,17 @@ export class NewsletterController {
         ctaLink
       );
 
+      // Atualizar campanha com resultados
+      campaign.sentCount = result.sent;
+      campaign.failedCount = result.failed;
+      campaign.recipientEmails = result.sentEmails || [];
+      campaign.failedEmails = result.failedEmails || [];
+
+      await this.campaignRepository.save(campaign);
+
       return res.json({
         message: `Newsletter enviada com sucesso!`,
+        campaignId: campaign.id,
         stats: {
           total: activeSubscribers.length,
           sent: result.sent,
@@ -186,6 +213,47 @@ export class NewsletterController {
     } catch (error: any) {
       console.error('Erro ao enviar newsletter:', error);
       return res.status(500).json({ message: error.message || 'Erro ao enviar newsletter' });
+    }
+  }
+
+  private async getCampaigns(req: Request, res: Response) {
+    try {
+      const { page = 1, limit = 50 } = req.query;
+
+      const [campaigns, total] = await this.campaignRepository.findAndCount({
+        order: { sentAt: 'DESC' },
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
+        relations: ['sentByUser'],
+      });
+
+      return res.json({
+        campaigns,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  private async getCampaignDetails(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const campaign = await this.campaignRepository.findOne({
+        where: { id },
+        relations: ['sentByUser'],
+      });
+
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campanha não encontrada' });
+      }
+
+      return res.json(campaign);
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
     }
   }
 
