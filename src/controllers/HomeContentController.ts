@@ -41,7 +41,7 @@ export class HomeContentController {
    * GET /api/home-content/public
    * Get public home page content (cached)
    */
-  private async getPublicContent(req: Request, res: Response) {
+  private async getPublicContent(_req: Request, res: Response) {
     try {
       let content = await this.homeContentRepository.findOne({
         where: {},
@@ -67,7 +67,7 @@ export class HomeContentController {
    * GET /api/home-content/admin
    * Get home content for admin editing
    */
-  private async getAdminContent(req: Request, res: Response) {
+  private async getAdminContent(_req: Request, res: Response) {
     try {
       let content = await this.homeContentRepository.findOne({
         where: {},
@@ -113,7 +113,13 @@ export class HomeContentController {
         content.hero = updateData.hero;
       }
       if (updateData.carousel !== undefined) {
-        content.carousel = updateData.carousel;
+        // Garantir que todos os itens do carrossel tenham id
+        content.carousel = updateData.carousel.map((item, index) => ({
+          id: item.id || `carousel-${Date.now()}-${index}`,
+          url: item.url,
+          alt: item.alt,
+          order: item.order,
+        }));
       }
       if (updateData.whyChooseUs !== undefined) {
         content.whyChooseUs = updateData.whyChooseUs;
