@@ -36,6 +36,7 @@ import { NewsletterController } from './controllers/NewsletterController';
 import { EmailTrackingController } from './controllers/EmailTrackingController';
 import { UploadController } from './controllers/UploadController';
 import { SupportController } from './controllers/SupportController';
+import { HomeContentController } from './controllers/HomeContentController';
 
 dotenv.config();
 
@@ -184,6 +185,7 @@ const userPodcastController = new UserPodcastController();
 const newsletterController = new NewsletterController();
 const emailTrackingController = new EmailTrackingController();
 const uploadController = new UploadController();
+const homeContentController = new HomeContentController();
 
 // Socket.io Authentication Middleware (deve vir antes do SupportController usar)
 io.use(async (socket, next) => {
@@ -237,6 +239,7 @@ app.use('/api/newsletter', newsletterController.getRouter());
 app.use('/api/email/track', emailTrackingController.getRouter());
 app.use('/api/upload', uploadController.getRouter());
 app.use('/api/support', supportController.getRouter());
+app.use('/api/home-content', homeContentController.getRouter());
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

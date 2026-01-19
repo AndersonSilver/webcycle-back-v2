@@ -19,8 +19,10 @@ import { ShareToken } from '../entities/ShareToken.entity';
 import { Podcast } from '../entities/Podcast.entity';
 import { UserPodcast } from '../entities/UserPodcast.entity';
 import { NewsletterSubscriber } from '../entities/NewsletterSubscriber.entity';
+import { NewsletterCampaign } from '../entities/NewsletterCampaign.entity';
 import { SupportTicket } from '../entities/SupportTicket.entity';
 import { SupportMessage } from '../entities/SupportMessage.entity';
+import { HomePageContent } from '../entities/HomePageContent.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -51,8 +53,10 @@ export const AppDataSource = new DataSource({
     Podcast,
     UserPodcast,
     NewsletterSubscriber,
+    NewsletterCampaign,
     SupportTicket,
     SupportMessage,
+    HomePageContent,
   ],
   migrations: ['src/migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],

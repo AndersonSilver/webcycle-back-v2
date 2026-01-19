@@ -449,10 +449,12 @@ class EmailService {
     content: string,
     ctaText?: string,
     ctaLink?: string
-  ): Promise<{ sent: number; failed: number; errors: string[] }> {
+  ): Promise<{ sent: number; failed: number; errors: string[]; sentEmails: string[]; failedEmails: string[] }> {
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
+    const sentEmails: string[] = [];
+    const failedEmails: string[] = [];
 
     // Enviar emails em lotes para evitar sobrecarga
     const batchSize = 10;
@@ -471,8 +473,10 @@ class EmailService {
               ctaLink
             );
             sent++;
+            sentEmails.push(subscriber.email);
           } catch (error: any) {
             failed++;
+            failedEmails.push(subscriber.email);
             errors.push(`${subscriber.email}: ${error.message}`);
             console.error(`Erro ao enviar newsletter para ${subscriber.email}:`, error);
           }
@@ -485,7 +489,7 @@ class EmailService {
       }
     }
 
-    return { sent, failed, errors };
+    return { sent, failed, errors, sentEmails, failedEmails };
   }
 
   /**
