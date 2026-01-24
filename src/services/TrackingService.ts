@@ -380,8 +380,8 @@ export class TrackingService {
    */
   private async sendTrackingUpdateEmail(
     tracking: ShippingTracking,
-    previousStatus: ShippingStatus,
-    newStatus: ShippingStatus
+    _previousStatus: ShippingStatus,
+    _newStatus: ShippingStatus
   ): Promise<void> {
     try {
       const productPurchase = await this.productPurchaseRepository.findOne({

@@ -10,8 +10,6 @@ import { emailService } from '../services/EmailService';
 export class WebhookController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
-  private productPurchaseRepository: Repository<ProductPurchase>;
-  private productRepository: Repository<Product>;
   private paymentService: PaymentService;
   // Cache para evitar processar o mesmo payment_id múltiplas vezes em sequência
   private processedPayments: Set<string> = new Set();
@@ -21,8 +19,6 @@ export class WebhookController {
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
-    this.productPurchaseRepository = AppDataSource.getRepository(ProductPurchase);
-    this.productRepository = AppDataSource.getRepository(Product);
     this.paymentService = new PaymentService();
     this.setupRoutes();
     

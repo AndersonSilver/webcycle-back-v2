@@ -8,10 +8,8 @@ import {
   Min,
   Max,
   IsUrl,
-  ValidateNested,
   IsObject,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ProductType } from '../entities/Product.entity';
 
 export class CreateProductDto {

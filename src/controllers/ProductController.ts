@@ -86,10 +86,10 @@ export class ProductController {
         return res.status(404).json({ error: 'Produto não encontrado' });
       }
 
-      res.json({ product });
+      return res.json({ product });
     } catch (error) {
       console.error('Erro ao buscar produto:', error);
-      res.status(500).json({ error: 'Erro ao buscar produto' });
+      return res.status(500).json({ error: 'Erro ao buscar produto' });
     }
   }
 
@@ -144,7 +144,7 @@ export class ProductController {
         order: { createdAt: 'DESC' },
       });
 
-      res.json({
+      return res.json({
         products,
         pagination: {
           page: pageNum,
@@ -155,7 +155,7 @@ export class ProductController {
       });
     } catch (error) {
       console.error('Erro ao buscar produtos por tipo:', error);
-      res.status(500).json({ error: 'Erro ao buscar produtos por tipo' });
+      return res.status(500).json({ error: 'Erro ao buscar produtos por tipo' });
     }
   }
 
@@ -197,10 +197,10 @@ export class ProductController {
       Object.assign(product, productData);
       const updatedProduct = await this.productRepository.save(product);
 
-      res.json(updatedProduct);
+      return res.json(updatedProduct);
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
-      res.status(500).json({ error: 'Erro ao atualizar produto' });
+      return res.status(500).json({ error: 'Erro ao atualizar produto' });
     }
   }
 
@@ -218,10 +218,10 @@ export class ProductController {
 
       await this.productRepository.remove(product);
 
-      res.json({ message: 'Produto removido com sucesso' });
+      return res.json({ message: 'Produto removido com sucesso' });
     } catch (error) {
       console.error('Erro ao remover produto:', error);
-      res.status(500).json({ error: 'Erro ao remover produto' });
+      return res.status(500).json({ error: 'Erro ao remover produto' });
     }
   }
 

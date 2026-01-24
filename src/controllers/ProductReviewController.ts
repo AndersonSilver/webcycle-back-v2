@@ -218,7 +218,7 @@ export class ProductReviewController {
     }
   }
 
-  private async getAll(req: Request, res: Response) {
+  private async getAll(_req: Request, res: Response) {
     try {
       const reviews = await this.reviewRepository.find({
         relations: ['user', 'product'],
@@ -246,7 +246,7 @@ export class ProductReviewController {
     }
   }
 
-  private async getPending(req: Request, res: Response) {
+  private async getPending(_req: Request, res: Response) {
     try {
       const reviews = await this.reviewRepository.find({
         where: { approved: false },

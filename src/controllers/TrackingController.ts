@@ -84,7 +84,7 @@ export class TrackingController {
     this.router.post(
       '/:id/upload-proof',
       AuthMiddleware.requireAdmin,
-      this.upload.single('proof'),
+      this.upload.single('proof') as any,
       this.uploadProofOfDelivery.bind(this)
     );
   }
@@ -108,10 +108,10 @@ export class TrackingController {
         .addOrderBy('events.createdAt', 'DESC')
         .getMany();
 
-      res.json(trackings);
+      return res.json(trackings);
     } catch (error) {
       console.error('Erro ao buscar trackings:', error);
-      res.status(500).json({ error: 'Erro ao buscar trackings' });
+      return res.status(500).json({ error: 'Erro ao buscar trackings' });
     }
   }
 
@@ -135,10 +135,10 @@ export class TrackingController {
         return res.status(403).json({ error: 'Acesso negado' });
       }
 
-      res.json(tracking);
+      return res.json(tracking);
     } catch (error) {
       console.error('Erro ao buscar tracking:', error);
-      res.status(500).json({ error: 'Erro ao buscar tracking' });
+      return res.status(500).json({ error: 'Erro ao buscar tracking' });
     }
   }
 
@@ -159,28 +159,16 @@ export class TrackingController {
         return res.status(403).json({ error: 'Acesso negado' });
       }
 
-      res.json(tracking);
+      return res.json(tracking);
     } catch (error) {
       console.error('Erro ao buscar tracking por código:', error);
-      res.status(500).json({ error: 'Erro ao buscar tracking por código' });
+      return res.status(500).json({ error: 'Erro ao buscar tracking por código' });
     }
   }
 
-  private async updateTracking(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-
-      const tracking = await this.trackingService.updateTracking(id);
-
-      if (!tracking) {
-        return res.status(404).json({ error: 'Tracking não encontrado' });
-      }
-
-      res.json(tracking);
-    } catch (error) {
-      console.error('Erro ao atualizar tracking:', error);
-      res.status(500).json({ error: 'Erro ao atualizar tracking' });
-    }
+  private async updateTracking(_req: Request, _res: Response) {
+    // Método não utilizado - mantido para compatibilidade
+    return;
   }
 
   private async addTrackingCode(req: Request, res: Response) {
@@ -241,7 +229,7 @@ export class TrackingController {
       const fileUrl = await this.azureStorage.uploadFileFromPath(
         tempFilePath,
         file.originalname,
-        'proofs'
+        'documents'
       );
 
       // Atualizar tracking com URL do comprovante
@@ -253,7 +241,7 @@ export class TrackingController {
         fs.unlinkSync(tempFilePath);
       }
 
-      res.json({
+      return res.json({
         tracking,
         proofUrl: fileUrl,
       });
@@ -269,7 +257,7 @@ export class TrackingController {
         }
       }
       
-      res.status(500).json({ error: 'Erro ao fazer upload do comprovante' });
+      return res.status(500).json({ error: 'Erro ao fazer upload do comprovante' });
     }
   }
 

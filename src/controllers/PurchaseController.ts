@@ -13,9 +13,6 @@ import { AuthMiddleware } from '../middleware/AuthMiddleware';
 import { validateDto } from '../middleware/ValidationMiddleware';
 import { CheckoutDto, ConfirmPurchaseDto, ProcessPaymentDto } from '../dto/purchase.dto';
 import { calculateDiscount } from '../utils/helpers';
-import { TrackingService } from '../services/TrackingService';
-import { ShippingTracking, ShippingStatus } from '../entities/ShippingTracking.entity';
-import { emailService } from '../services/EmailService';
 
 export class PurchaseController {
   private router: Router;
@@ -25,9 +22,7 @@ export class PurchaseController {
   private courseRepository: Repository<Course>;
   private productRepository: Repository<Product>;
   private couponRepository: Repository<Coupon>;
-  private trackingRepository: Repository<ShippingTracking>;
   private paymentService: PaymentService;
-  private trackingService: TrackingService;
 
   constructor() {
     this.router = Router();
@@ -37,9 +32,7 @@ export class PurchaseController {
     this.courseRepository = AppDataSource.getRepository(Course);
     this.productRepository = AppDataSource.getRepository(Product);
     this.couponRepository = AppDataSource.getRepository(Coupon);
-    this.trackingRepository = AppDataSource.getRepository(ShippingTracking);
     this.paymentService = new PaymentService();
-    this.trackingService = new TrackingService();
     this.setupRoutes();
   }
 
