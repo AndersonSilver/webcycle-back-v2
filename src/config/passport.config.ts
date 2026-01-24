@@ -65,11 +65,22 @@ passport.use(
   )
 );
 
-// JWT Strategy
+// JWT Strategy - Aceita token do header Authorization OU da query string
 passport.use(
   new JwtStrategy(
     {
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        // Primeiro tenta do header Authorization
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        // Se não encontrar, tenta da query string
+        (req) => {
+          let token = null;
+          if (req && req.query && req.query.token) {
+            token = req.query.token as string;
+          }
+          return token;
+        },
+      ]),
       secretOrKey: env.jwtSecret,
     },
     async (payload, done) => {

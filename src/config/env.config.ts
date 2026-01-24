@@ -46,8 +46,12 @@ export const env = {
   // App
   port: parseInt(process.env.PORT || '3001'),
   nodeEnv: process.env.NODE_ENV || 'development',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   sessionSecret: process.env.SESSION_SECRET || 'your_session_secret',
+
+  // Tracking (Brasil Aberto)
+  BRASIL_ABERTO_API_KEY: process.env.BRASIL_ABERTO_API_KEY || '',
+  BRASIL_ABERTO_API_URL: process.env.BRASIL_ABERTO_API_URL || 'https://brasilaberto.com/api',
 };
 

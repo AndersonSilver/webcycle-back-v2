@@ -2,12 +2,16 @@ import { Request, Response, Router } from 'express';
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
+import { ProductPurchase } from '../entities/ProductPurchase.entity';
+import { Product, ProductType } from '../entities/Product.entity';
 import { PaymentService } from '../services/PaymentService';
 import { emailService } from '../services/EmailService';
 
 export class WebhookController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
+  private productPurchaseRepository: Repository<ProductPurchase>;
+  private productRepository: Repository<Product>;
   private paymentService: PaymentService;
   // Cache para evitar processar o mesmo payment_id múltiplas vezes em sequência
   private processedPayments: Set<string> = new Set();
@@ -17,6 +21,8 @@ export class WebhookController {
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
+    this.productPurchaseRepository = AppDataSource.getRepository(ProductPurchase);
+    this.productRepository = AppDataSource.getRepository(Product);
     this.paymentService = new PaymentService();
     this.setupRoutes();
     
@@ -314,41 +320,94 @@ export class WebhookController {
           // Buscar compra completa com relacionamentos
           const completePurchase = await this.purchaseRepository.findOne({
             where: { id: purchase.id },
-            relations: ['user', 'courses', 'courses.course'],
+            relations: ['user', 'courses', 'courses.course', 'products', 'products.product'],
           });
 
-          if (completePurchase && completePurchase.user && completePurchase.courses) {
+          if (completePurchase && completePurchase.user) {
             // Verificar se já foi enviado email para esta compra recentemente
             const purchaseKey = `email_${purchase.id}`;
             if (this.processedPayments.has(purchaseKey)) {
               console.log(`⏭️  Email já foi enviado para compra ${purchase.id}, pulando...`);
               return;
             }
-            
+
+            // Processar produtos digitais (adicionar à biblioteca do usuário)
+            if (completePurchase.products && completePurchase.products.length > 0) {
+              const digitalProducts = completePurchase.products.filter(
+                (pp) => pp.product && pp.product.type === ProductType.DIGITAL
+              );
+
+              if (digitalProducts.length > 0) {
+                console.log(`📚 Processando ${digitalProducts.length} produto(s) digital(is)...`);
+                // Produtos digitais já estão associados à compra, então estão disponíveis na biblioteca
+                // Não precisa fazer nada adicional aqui, apenas logar
+                for (const productPurchase of digitalProducts) {
+                  console.log(`✅ Produto digital "${productPurchase.product?.title}" disponível na biblioteca do usuário`);
+                }
+              }
+            }
+
+            // Preparar dados para email
             const courses = completePurchase.courses
-              .filter((pc) => pc.course)
-              .map((pc) => {
-                const price = typeof pc.course!.price === 'string' 
-                  ? parseFloat(pc.course!.price) 
-                  : pc.course!.price;
-                return {
-                  title: pc.course!.title,
-                  price: price,
-                };
-              });
+              ? completePurchase.courses
+                  .filter((pc) => pc.course)
+                  .map((pc) => {
+                    const price = typeof pc.course!.price === 'string' 
+                      ? parseFloat(pc.course!.price) 
+                      : pc.course!.price;
+                    return {
+                      title: pc.course!.title,
+                      price: price,
+                    };
+                  })
+              : [];
+
+            const products = completePurchase.products
+              ? completePurchase.products
+                  .filter((pp) => pp.product)
+                  .map((pp) => {
+                    const price = typeof pp.price === 'string' 
+                      ? parseFloat(pp.price) 
+                      : pp.price;
+                    return {
+                      title: pp.product!.title,
+                      price: price,
+                      quantity: pp.quantity,
+                      type: pp.product!.type,
+                    };
+                  })
+              : [];
 
             const totalAmount = completePurchase.totalAmount 
               ? (typeof completePurchase.totalAmount === 'string' 
                   ? parseFloat(completePurchase.totalAmount) 
                   : completePurchase.totalAmount)
-              : courses.reduce((sum, c) => sum + c.price, 0);
+              : courses.reduce((sum, c) => sum + c.price, 0) + 
+                products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
 
+            // Enviar email de confirmação
             await emailService.sendPurchaseConfirmationEmail(
               completePurchase.user.email,
               completePurchase.user.name,
               courses,
-              totalAmount
+              totalAmount,
+              products
             );
+
+            // Enviar email para admin sobre produtos físicos
+            const physicalProducts = products.filter((p) => p.type === ProductType.PHYSICAL);
+            if (physicalProducts.length > 0) {
+              try {
+                await emailService.sendAdminPhysicalProductNotification(
+                  completePurchase.user.email,
+                  completePurchase.user.name,
+                  physicalProducts,
+                  completePurchase.id
+                );
+              } catch (error) {
+                console.error('Erro ao enviar email para admin sobre produtos físicos:', error);
+              }
+            }
             
             // Marcar como enviado e atualizar timestamp
             this.processedPayments.add(purchaseKey);

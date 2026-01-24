@@ -37,6 +37,10 @@ import { EmailTrackingController } from './controllers/EmailTrackingController';
 import { UploadController } from './controllers/UploadController';
 import { SupportController } from './controllers/SupportController';
 import { HomeContentController } from './controllers/HomeContentController';
+import { ThemeController } from './controllers/ThemeController';
+import { ProductController } from './controllers/ProductController';
+import { ProductReviewController } from './controllers/ProductReviewController';
+import { TrackingController } from './controllers/TrackingController';
 
 dotenv.config();
 
@@ -186,6 +190,10 @@ const newsletterController = new NewsletterController();
 const emailTrackingController = new EmailTrackingController();
 const uploadController = new UploadController();
 const homeContentController = new HomeContentController();
+const themeController = new ThemeController();
+const productController = new ProductController();
+const productReviewController = new ProductReviewController();
+const trackingController = new TrackingController();
 
 // Socket.io Authentication Middleware (deve vir antes do SupportController usar)
 io.use(async (socket, next) => {
@@ -240,6 +248,10 @@ app.use('/api/email/track', emailTrackingController.getRouter());
 app.use('/api/upload', uploadController.getRouter());
 app.use('/api/support', supportController.getRouter());
 app.use('/api/home-content', homeContentController.getRouter());
+app.use('/api/theme', themeController.getRouter());
+app.use('/api/products', productController.getRouter());
+app.use('/api/product-reviews', productReviewController.getRouter());
+app.use('/api/tracking', trackingController.getRouter());
 
 // Error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

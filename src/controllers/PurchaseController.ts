@@ -3,7 +3,9 @@ import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { Purchase, PaymentStatus, PaymentMethod } from '../entities/Purchase.entity';
 import { PurchaseCourse } from '../entities/PurchaseCourse.entity';
+import { ProductPurchase } from '../entities/ProductPurchase.entity';
 import { Course } from '../entities/Course.entity';
+import { Product, ProductType } from '../entities/Product.entity';
 import { User } from '../entities/User.entity';
 import { Coupon } from '../entities/Coupon.entity';
 import { PaymentService } from '../services/PaymentService';
@@ -11,22 +13,33 @@ import { AuthMiddleware } from '../middleware/AuthMiddleware';
 import { validateDto } from '../middleware/ValidationMiddleware';
 import { CheckoutDto, ConfirmPurchaseDto, ProcessPaymentDto } from '../dto/purchase.dto';
 import { calculateDiscount } from '../utils/helpers';
+import { TrackingService } from '../services/TrackingService';
+import { ShippingTracking, ShippingStatus } from '../entities/ShippingTracking.entity';
+import { emailService } from '../services/EmailService';
 
 export class PurchaseController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
   private purchaseCourseRepository: Repository<PurchaseCourse>;
+  private productPurchaseRepository: Repository<ProductPurchase>;
   private courseRepository: Repository<Course>;
+  private productRepository: Repository<Product>;
   private couponRepository: Repository<Coupon>;
+  private trackingRepository: Repository<ShippingTracking>;
   private paymentService: PaymentService;
+  private trackingService: TrackingService;
 
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
     this.purchaseCourseRepository = AppDataSource.getRepository(PurchaseCourse);
+    this.productPurchaseRepository = AppDataSource.getRepository(ProductPurchase);
     this.courseRepository = AppDataSource.getRepository(Course);
+    this.productRepository = AppDataSource.getRepository(Product);
     this.couponRepository = AppDataSource.getRepository(Coupon);
+    this.trackingRepository = AppDataSource.getRepository(ShippingTracking);
     this.paymentService = new PaymentService();
+    this.trackingService = new TrackingService();
     this.setupRoutes();
   }
 
@@ -48,63 +61,118 @@ export class PurchaseController {
       if (!user) {
         return res.status(401).json({ message: 'Não autenticado' });
       }
-      const { courses: courseIds, paymentMethod, couponCode } = req.body as CheckoutDto;
+      const { courses: courseIds = [], products: productItems = [], paymentMethod, couponCode } = req.body as CheckoutDto;
+
+      // Validar que pelo menos um item foi selecionado
+      if (courseIds.length === 0 && productItems.length === 0) {
+        return res.status(400).json({ message: 'Selecione pelo menos um curso ou produto' });
+      }
+
+      let courses: Course[] = [];
+      let products: Product[] = [];
 
       // Buscar cursos
-      const courses = await this.courseRepository.find({
-        where: courseIds.map((id) => ({ id })),
-      });
+      if (courseIds.length > 0) {
+        courses = await this.courseRepository.find({
+          where: courseIds.map((id) => ({ id })),
+        });
 
-      if (courses.length !== courseIds.length) {
-        return res.status(400).json({ message: 'Um ou mais cursos não encontrados' });
+        if (courses.length !== courseIds.length) {
+          return res.status(400).json({ message: 'Um ou mais cursos não encontrados' });
+        }
+      }
+
+      // Buscar produtos
+      if (productItems.length > 0) {
+        const productIds = productItems.map((item) => item.productId);
+        products = await this.productRepository.find({
+          where: productIds.map((id) => ({ id })),
+        });
+
+        if (products.length !== productIds.length) {
+          return res.status(400).json({ message: 'Um ou mais produtos não encontrados' });
+        }
+
+        // Validar estoque e produtos ativos
+        for (const item of productItems) {
+          const product = products.find((p) => p.id === item.productId);
+          if (!product) continue;
+
+          if (!product.active) {
+            return res.status(400).json({ message: `Produto ${product.title} não está disponível` });
+          }
+
+          if (product.type === ProductType.PHYSICAL && product.stock < item.quantity) {
+            return res.status(400).json({ message: `Estoque insuficiente para ${product.title}` });
+          }
+        }
       }
 
       // ✅ Verificar se o usuário já possui algum dos cursos
-      const existingPurchases = await this.purchaseRepository
-        .createQueryBuilder('purchase')
-        .innerJoin('purchase.courses', 'pc')
-        .where('purchase.userId = :userId', { userId: user.id })
-        .andWhere('pc.courseId IN (:...courseIds)', { courseIds })
-        .andWhere('purchase.paymentStatus = :status', { status: PaymentStatus.PAID })
-        .getMany();
+      if (courseIds.length > 0) {
+        const existingPurchases = await this.purchaseRepository
+          .createQueryBuilder('purchase')
+          .innerJoin('purchase.courses', 'pc')
+          .where('purchase.userId = :userId', { userId: user.id })
+          .andWhere('pc.courseId IN (:...courseIds)', { courseIds })
+          .andWhere('purchase.paymentStatus = :status', { status: PaymentStatus.PAID })
+          .getMany();
 
-      if (existingPurchases.length > 0) {
-        // Buscar quais cursos já foram comprados
-        const purchasedCourseIds: string[] = [];
-        for (const purchase of existingPurchases) {
-          const purchaseCourses = await this.purchaseCourseRepository.find({
-            where: { purchaseId: purchase.id },
-          });
-          purchaseCourses.forEach(pc => {
-            if (courseIds.includes(pc.courseId) && !purchasedCourseIds.includes(pc.courseId)) {
-              purchasedCourseIds.push(pc.courseId);
-            }
-          });
-        }
+        if (existingPurchases.length > 0) {
+          // Buscar quais cursos já foram comprados
+          const purchasedCourseIds: string[] = [];
+          for (const purchase of existingPurchases) {
+            const purchaseCourses = await this.purchaseCourseRepository.find({
+              where: { purchaseId: purchase.id },
+            });
+            purchaseCourses.forEach(pc => {
+              if (courseIds.includes(pc.courseId) && !purchasedCourseIds.includes(pc.courseId)) {
+                purchasedCourseIds.push(pc.courseId);
+              }
+            });
+          }
 
-        if (purchasedCourseIds.length > 0) {
-          const purchasedCourses = await this.courseRepository.find({
-            where: purchasedCourseIds.map(id => ({ id })),
-          });
-          const courseTitles = purchasedCourses.map(c => c.title).join(', ');
-          return res.status(400).json({ 
-            message: `Você já possui o(s) seguinte(s) curso(s): ${courseTitles}`,
-            alreadyOwned: purchasedCourseIds,
-          });
+          if (purchasedCourseIds.length > 0) {
+            const purchasedCourses = await this.courseRepository.find({
+              where: purchasedCourseIds.map(id => ({ id })),
+            });
+            const courseTitles = purchasedCourses.map(c => c.title).join(', ');
+            return res.status(400).json({ 
+              message: `Você já possui o(s) seguinte(s) curso(s): ${courseTitles}`,
+              alreadyOwned: purchasedCourseIds,
+            });
+          }
         }
       }
 
       // Calcular totais
       // Valor atual dos cursos (já com desconto do curso aplicado)
-      let totalAmount = courses.reduce((sum, course) => sum + Number(course.price), 0);
+      let courseTotal = courses.reduce((sum, course) => sum + Number(course.price), 0);
       
       // Valor original dos cursos (antes de qualquer desconto)
-      let totalOriginal = courses.reduce((sum, course) => {
+      let courseOriginal = courses.reduce((sum, course) => {
         const originalPrice = course.originalPrice 
           ? Number(course.originalPrice) 
           : Number(course.price);
         return sum + originalPrice;
       }, 0);
+
+      // Calcular totais dos produtos
+      let productTotal = 0;
+      let productOriginal = 0;
+      for (const item of productItems) {
+        const product = products.find((p) => p.id === item.productId);
+        if (!product) continue;
+
+        const price = Number(product.price);
+        const originalPrice = product.originalPrice ? Number(product.originalPrice) : price;
+        
+        productTotal += price * item.quantity;
+        productOriginal += originalPrice * item.quantity;
+      }
+
+      let totalAmount = courseTotal + productTotal;
+      let totalOriginal = courseOriginal + productOriginal;
       
       // Desconto do curso (diferença entre original e atual)
       // Nota: courseDiscount é usado apenas para cálculo, não precisa ser armazenado separadamente
@@ -127,14 +195,16 @@ export class PurchaseController {
             (!coupon.expiresAt || coupon.expiresAt >= new Date());
 
           if (isValid) {
-            // Verificar se o cupom se aplica aos cursos selecionados
+            // Verificar se o cupom se aplica aos cursos/produtos selecionados
             const applicableToCourses = 
+              courseIds.length === 0 ||
               !coupon.applicableCourses || 
               coupon.applicableCourses.length === 0 ||
               courseIds.some(courseId => coupon.applicableCourses?.includes(courseId));
 
+            // Por enquanto, cupons se aplicam a produtos também (pode ser ajustado depois)
             if (applicableToCourses) {
-              // ✅ IMPORTANTE: Calcular desconto do cupom sobre o valor JÁ COM DESCONTO DO CURSO
+              // ✅ IMPORTANTE: Calcular desconto do cupom sobre o valor total
               discountAmount = calculateDiscount(
                 totalAmount,
                 Number(coupon.discount),
@@ -186,31 +256,85 @@ export class PurchaseController {
       }
 
       // Criar relacionamentos com cursos
-      const purchaseCourses = courseIds.map((courseId) =>
-        this.purchaseCourseRepository.create({
-          purchaseId: savedPurchase.id,
-          courseId,
-        })
-      );
-      await this.purchaseCourseRepository.save(purchaseCourses);
+      if (courseIds.length > 0) {
+        const purchaseCourses = courseIds.map((courseId) =>
+          this.purchaseCourseRepository.create({
+            purchaseId: savedPurchase.id,
+            courseId,
+          })
+        );
+        await this.purchaseCourseRepository.save(purchaseCourses);
+      }
+
+      // Criar relacionamentos com produtos
+      if (productItems.length > 0) {
+        const purchaseProducts = productItems.map((item) => {
+          const product = products.find((p) => p.id === item.productId);
+          return this.productPurchaseRepository.create({
+            purchaseId: savedPurchase.id,
+            productId: item.productId,
+            price: Number(product!.price),
+            quantity: item.quantity,
+          });
+        });
+        await this.productPurchaseRepository.save(purchaseProducts);
+
+        // Reduzir estoque de produtos físicos
+        for (const item of productItems) {
+          const product = products.find((p) => p.id === item.productId);
+          if (product && product.type === ProductType.PHYSICAL) {
+            await this.productRepository.decrement({ id: product.id }, 'stock', item.quantity);
+            await this.productRepository.increment({ id: product.id }, 'salesCount', item.quantity);
+          } else if (product && product.type === ProductType.DIGITAL) {
+            await this.productRepository.increment({ id: product.id }, 'salesCount', item.quantity);
+          }
+        }
+      }
+
+      // Preparar descrição e itens para o pagamento
+      const itemDescriptions: string[] = [];
+      if (courses.length > 0) itemDescriptions.push(`${courses.length} curso(s)`);
+      if (productItems.length > 0) itemDescriptions.push(`${productItems.length} produto(s)`);
+      const description = `Compra de ${itemDescriptions.join(' e ')}`;
 
       // Criar pagamento com informações completas para melhorar aprovação do Mercado Pago
-      const payment = await this.paymentService.createPayment({
-        amount: finalAmount,
-        description: `Compra de ${courses.length} curso(s)`,
-        purchaseId: savedPurchase.id,
-        paymentMethod,
-        payerEmail: user.email,
-        payerName: user.name,
-        // ✅ Passar informações dos cursos para melhorar detalhamento (26 pontos)
-        courses: courses.map(course => ({
+      const paymentItems: any[] = [];
+      
+      // Adicionar cursos
+      courses.forEach(course => {
+        paymentItems.push({
           id: course.id,
           title: course.title,
           description: course.description || course.subtitle || `Curso: ${course.title}`,
           price: Number(course.price),
           category: course.category,
-          quantity: 1, // Cada curso tem quantidade 1
-        })),
+          quantity: 1,
+        });
+      });
+
+      // Adicionar produtos
+      productItems.forEach(item => {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          paymentItems.push({
+            id: product.id,
+            title: product.title,
+            description: product.description || `Produto: ${product.title}`,
+            price: Number(product.price),
+            category: product.category || 'produto',
+            quantity: item.quantity,
+          });
+        }
+      });
+
+      const payment = await this.paymentService.createPayment({
+        amount: finalAmount,
+        description,
+        purchaseId: savedPurchase.id,
+        paymentMethod,
+        payerEmail: user.email,
+        payerName: user.name,
+        courses: paymentItems,
       });
 
       // Atualizar compra com ID do pagamento
@@ -420,7 +544,7 @@ export class PurchaseController {
 
       const purchases = await this.purchaseRepository.find({
         where: { userId: user.id },
-        relations: ['courses', 'courses.course'],
+        relations: ['courses', 'courses.course', 'products', 'products.product', 'products.tracking', 'products.tracking.events'],
         order: { createdAt: 'DESC' },
       });
 
@@ -440,7 +564,7 @@ export class PurchaseController {
 
       const purchase = await this.purchaseRepository.findOne({
         where: { id },
-        relations: ['courses', 'courses.course', 'coupon'],
+        relations: ['courses', 'courses.course', 'products', 'products.product', 'products.tracking', 'products.tracking.events', 'coupon'],
       });
 
       if (!purchase) {

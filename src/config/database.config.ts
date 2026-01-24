@@ -23,6 +23,12 @@ import { NewsletterCampaign } from '../entities/NewsletterCampaign.entity';
 import { SupportTicket } from '../entities/SupportTicket.entity';
 import { SupportMessage } from '../entities/SupportMessage.entity';
 import { HomePageContent } from '../entities/HomePageContent.entity';
+import { Theme } from '../entities/Theme.entity';
+import { Product } from '../entities/Product.entity';
+import { ProductPurchase } from '../entities/ProductPurchase.entity';
+import { ShippingTracking } from '../entities/ShippingTracking.entity';
+import { TrackingEvent } from '../entities/TrackingEvent.entity';
+import { ProductReview } from '../entities/ProductReview.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -57,6 +63,12 @@ export const AppDataSource = new DataSource({
     SupportTicket,
     SupportMessage,
     HomePageContent,
+    Theme,
+    Product,
+    ProductPurchase,
+    ShippingTracking,
+    TrackingEvent,
+    ProductReview,
   ],
   migrations: ['src/migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],

@@ -12,7 +12,15 @@ import { PaymentMethod } from '../entities/Purchase.entity';
 export class CheckoutDto {
   @IsArray()
   @IsUUID('4', { each: true })
-  courses!: string[];
+  @IsOptional()
+  courses?: string[];
+
+  @IsArray()
+  @IsOptional()
+  products?: Array<{
+    productId: string;
+    quantity: number;
+  }>;
 
   @IsString()
   @IsOptional()

@@ -320,46 +320,175 @@ class EmailService {
     userEmail: string,
     userName: string,
     courses: Array<{ title: string; price: number }>,
-    totalAmount: number
+    totalAmount: number,
+    products?: Array<{ title: string; price: number; quantity: number; type: string }>
   ): Promise<void> {
     const trackingId = uuidv4();
-    const coursesList = courses
-      .map((course) => {
-        const price = typeof course.price === 'string' ? parseFloat(course.price) : course.price;
-        return `<li><strong>${course.title}</strong> - R$ ${price.toFixed(2)}</li>`;
-      })
-      .join('');
+    
+    let coursesList = '';
+    if (courses.length > 0) {
+      coursesList = courses
+        .map((course) => {
+          const price = typeof course.price === 'string' ? parseFloat(course.price) : course.price;
+          return `<li><strong>${course.title}</strong> - R$ ${price.toFixed(2)}</li>`;
+        })
+        .join('');
+    }
+
+    let productsList = '';
+    if (products && products.length > 0) {
+      const digitalProducts = products.filter((p) => p.type === 'digital');
+      const physicalProducts = products.filter((p) => p.type === 'physical');
+
+      if (digitalProducts.length > 0) {
+        productsList += '<h4>📚 Produtos Digitais:</h4><ul>';
+        productsList += digitalProducts
+          .map((product) => {
+            const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+            return `<li><strong>${product.title}</strong> (${product.quantity}x) - R$ ${(price * product.quantity).toFixed(2)}</li>`;
+          })
+          .join('');
+        productsList += '</ul>';
+      }
+
+      if (physicalProducts.length > 0) {
+        productsList += '<h4>📦 Produtos Físicos:</h4><ul>';
+        productsList += physicalProducts
+          .map((product) => {
+            const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+            return `<li><strong>${product.title}</strong> (${product.quantity}x) - R$ ${(price * product.quantity).toFixed(2)}</li>`;
+          })
+          .join('');
+        productsList += '</ul>';
+        productsList += '<p style="margin-top: 15px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><strong>📦 Envio:</strong> Seus produtos físicos serão enviados pelos Correios. Você receberá um código de rastreamento por email assim que o produto for postado.</p>';
+      }
+    }
+
+    const hasDigitalContent = courses.length > 0 || (products && products.some((p) => p.type === 'digital'));
+    const hasPhysicalProducts = products && products.some((p) => p.type === 'physical');
+
+    let accessMessage = '';
+    if (hasDigitalContent) {
+      accessMessage = '<p>Sua compra foi confirmada com sucesso! Você já tem acesso aos conteúdos digitais adquiridos.</p>';
+    } else if (hasPhysicalProducts) {
+      accessMessage = '<p>Sua compra foi confirmada com sucesso! Seus produtos físicos serão preparados para envio.</p>';
+    } else {
+      accessMessage = '<p>Sua compra foi confirmada com sucesso!</p>';
+    }
 
     const content = `
       <p>Olá <strong>${userName}</strong>,</p>
-      <p>Sua compra foi confirmada com sucesso! Você já tem acesso aos cursos adquiridos.</p>
+      ${accessMessage}
       
-      <div class="course-list">
-        <h3>Cursos Adquiridos:</h3>
-        <ul>
+      ${courses.length > 0 ? `
+      <div class="course-list" style="margin: 20px 0; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+        <h3 style="margin-top: 0;">🎓 Cursos Adquiridos:</h3>
+        <ul style="margin: 10px 0;">
           ${coursesList}
         </ul>
-        <div class="total">Total: R$ ${(typeof totalAmount === 'string' ? parseFloat(totalAmount) : totalAmount).toFixed(2)}</div>
+      </div>
+      ` : ''}
+      
+      ${productsList ? `
+      <div class="product-list" style="margin: 20px 0; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+        ${productsList}
+      </div>
+      ` : ''}
+      
+      <div style="margin: 20px 0; padding: 15px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+        <strong>Total: R$ ${(typeof totalAmount === 'string' ? parseFloat(totalAmount) : totalAmount).toFixed(2)}</strong>
       </div>
       
-      <p>Bons estudos! 🎓</p>
+      ${hasDigitalContent ? '<p>Bons estudos! 🎓</p>' : ''}
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe PSICO</strong></p>
     `;
+
+    const ctaLink = hasDigitalContent 
+      ? `${env.frontendUrl || 'http://localhost:5173'}/minhas-compras`
+      : `${env.frontendUrl || 'http://localhost:5173'}/minhas-compras`;
+    const ctaText = hasDigitalContent ? 'Acessar Meus Cursos' : 'Ver Minhas Compras';
 
     const html = this.getBaseTemplate(
       '#10b981',
       '#059669',
       '✅ Compra Confirmada!',
       content,
-      'Acessar Meus Cursos',
-      `${env.frontendUrl || 'http://localhost:5173'}/meus-cursos`,
+      ctaText,
+      ctaLink,
       '#10b981'
     );
 
     await this.sendEmail({
       to: userEmail,
-      subject: 'Compra Confirmada - Acesso aos Cursos Liberado! ✅',
+      subject: 'Compra Confirmada! ✅',
+      html,
+      trackingId,
+    });
+  }
+
+  async sendAdminPhysicalProductNotification(
+    userEmail: string,
+    userName: string,
+    products: Array<{ title: string; price: number; quantity: number }>,
+    purchaseId: string
+  ): Promise<void> {
+    const trackingId = uuidv4();
+    const adminEmail = env.smtpFrom || env.smtpUser || 'admin@psicoedu.com';
+    
+    const productsList = products
+      .map((product) => {
+        const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+        return `<li><strong>${product.title}</strong> (${product.quantity}x) - R$ ${(price * product.quantity).toFixed(2)}</li>`;
+      })
+      .join('');
+
+    const content = `
+      <p>Olá,</p>
+      <p>Uma nova compra de produto(s) físico(s) foi realizada e precisa ser enviada:</p>
+      
+      <div style="margin: 20px 0; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+        <h3 style="margin-top: 0;">📦 Produtos para Envio:</h3>
+        <ul style="margin: 10px 0;">
+          ${productsList}
+        </ul>
+      </div>
+      
+      <div style="margin: 20px 0; padding: 15px; background-color: #f3f4f6; border-radius: 8px;">
+        <p><strong>Cliente:</strong> ${userName} (${userEmail})</p>
+        <p><strong>ID da Compra:</strong> ${purchaseId}</p>
+      </div>
+      
+      <p><strong>Próximos passos:</strong></p>
+      <ol>
+        <li>Preparar os produtos para envio</li>
+        <li>Postar nos Correios</li>
+        <li>Adicionar o código de rastreamento na compra</li>
+      </ol>
+      
+      <p style="margin-top: 20px;">
+        <a href="${env.frontendUrl || 'http://localhost:5173'}/admin/compras/${purchaseId}" 
+           style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          Ver Compra no Painel Admin
+        </a>
+      </p>
+      
+      <p>Abraços,<br><strong>Sistema PSICO</strong></p>
+    `;
+
+    const html = this.getBaseTemplate(
+      '#f59e0b',
+      '#d97706',
+      '📦 Nova Compra de Produto Físico',
+      content,
+      undefined,
+      undefined,
+      '#f59e0b'
+    );
+
+    await this.sendEmail({
+      to: adminEmail,
+      subject: `📦 Nova Compra de Produto Físico - ${userName}`,
       html,
       trackingId,
     });

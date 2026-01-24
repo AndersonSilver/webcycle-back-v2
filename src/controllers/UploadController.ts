@@ -4,6 +4,11 @@ import path from 'path';
 import fs from 'fs';
 import { AuthMiddleware } from '../middleware/AuthMiddleware';
 import { AzureStorageService } from '../services/AzureStorageService';
+import { AppDataSource } from '../config/database.config';
+import { Repository } from 'typeorm';
+import { Lesson } from '../entities/Lesson.entity';
+import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
+import { User } from '../entities/User.entity';
 
 export class UploadController {
   private router: Router;
@@ -11,10 +16,14 @@ export class UploadController {
   private upload: multer.Multer;
   private uploadDocument: multer.Multer;
   private tempDir: string;
+  private lessonRepository: Repository<Lesson>;
+  private purchaseRepository: Repository<Purchase>;
 
   constructor() {
     this.router = Router();
     this.azureStorage = new AzureStorageService();
+    this.lessonRepository = AppDataSource.getRepository(Lesson);
+    this.purchaseRepository = AppDataSource.getRepository(Purchase);
     
     // Criar diretório temporário se não existir
     this.tempDir = path.join(process.cwd(), 'temp-uploads');
@@ -124,10 +133,11 @@ export class UploadController {
       this.deleteFile.bind(this)
     );
 
-    // Streaming de vídeo (público, com range requests)
+    // Streaming de vídeo (requer autenticação e verificação de acesso)
     // Usar query parameter em vez de path parameter para URLs longas
     this.router.get(
       '/stream',
+      AuthMiddleware.authenticate,
       // Permitir CORS e OPTIONS para streaming
       (req, res, next) => {
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -241,8 +251,17 @@ export class UploadController {
 
   private async streamVideo(req: Request, res: Response): Promise<void> {
     try {
-      // Obter URL do query parameter
+      // Verificar autenticação
+      const user = req.user as User;
+      if (!user) {
+        res.status(401).json({ message: 'Não autenticado' });
+        return;
+      }
+
+      // Obter URL e lessonId do query parameter
       const encodedUrl = req.query.url as string;
+      const lessonId = req.query.lessonId as string;
+      
       if (!encodedUrl) {
         res.status(400).json({ message: 'URL não fornecida' });
         return;
@@ -256,6 +275,46 @@ export class UploadController {
       if (!videoUrl.includes('blob.core.windows.net')) {
         res.status(400).json({ message: 'URL inválida' });
         return;
+      }
+
+      // Verificar acesso à aula se lessonId for fornecido
+      if (lessonId) {
+        const lesson = await this.lessonRepository.findOne({
+          where: { id: lessonId },
+          relations: ['module', 'module.course'],
+        });
+
+        if (!lesson) {
+          res.status(404).json({ message: 'Aula não encontrada' });
+          return;
+        }
+
+        // Verificar se o vídeo pertence à aula
+        if (lesson.videoUrl !== videoUrl) {
+          res.status(403).json({ message: 'Vídeo não pertence a esta aula' });
+          return;
+        }
+
+        // Verificar acesso ao curso
+        let hasAccess = false;
+        if (lesson.free) {
+          hasAccess = true;
+        } else {
+          const purchase = await this.purchaseRepository
+            .createQueryBuilder('purchase')
+            .innerJoin('purchase.courses', 'pc')
+            .where('purchase.userId = :userId', { userId: user.id })
+            .andWhere('pc.courseId = :courseId', { courseId: lesson.module.courseId })
+            .andWhere('purchase.paymentStatus = :status', { status: PaymentStatus.PAID })
+            .getOne();
+
+          hasAccess = !!purchase;
+        }
+
+        if (!hasAccess) {
+          res.status(403).json({ message: 'Você não tem acesso a este conteúdo' });
+          return;
+        }
       }
 
       // Obter range header (importante para permitir seek no vídeo)
@@ -272,9 +331,17 @@ export class UploadController {
       res.setHeader('Content-Type', streamData.contentType);
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Content-Length', streamData.contentLength);
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache por 1 ano
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate'); // Não cachear vídeos protegidos
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.setHeader('Connection', 'keep-alive');
-      res.setHeader('Access-Control-Allow-Origin', '*'); // Permitir CORS para streaming
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY'); // Prevenir embedding em iframes
+      res.setHeader('Content-Disposition', 'inline'); // Não permitir download direto
+      // CORS apenas para o domínio do frontend
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
       
       if (streamData.contentRange) {

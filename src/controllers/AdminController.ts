@@ -152,7 +152,15 @@ export class AdminController {
         skip,
         take: Number(limit),
         order: { createdAt: 'DESC' },
-        relations: ['user', 'courses', 'courses.course'],
+        relations: [
+          'user', 
+          'courses', 
+          'courses.course',
+          'products',
+          'products.product',
+          'products.tracking',
+          'products.tracking.events'
+        ],
       });
 
       // Garantir que valores decimais sejam retornados como números

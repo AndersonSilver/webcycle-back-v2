@@ -11,6 +11,7 @@ import {
 import { User } from './User.entity';
 import { Coupon } from './Coupon.entity';
 import { PurchaseCourse } from './PurchaseCourse.entity';
+import { ProductPurchase } from './ProductPurchase.entity';
 
 export enum PaymentMethod {
   CREDIT_CARD = 'credit_card',
@@ -79,5 +80,10 @@ export class Purchase {
     cascade: true,
   })
   courses!: PurchaseCourse[];
+
+  @OneToMany(() => ProductPurchase, (productPurchase) => productPurchase.purchase, {
+    cascade: true,
+  })
+  products!: ProductPurchase[];
 }
 
