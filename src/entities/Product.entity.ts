@@ -14,6 +14,11 @@ export enum ProductType {
   DIGITAL = 'digital',
 }
 
+export enum DigitalContentType {
+  URL = 'url',
+  UPLOAD = 'upload',
+}
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
@@ -54,6 +59,14 @@ export class Product {
 
   @Column('text', { nullable: true, name: 'digital_file_url' })
   digitalFileUrl?: string;
+
+  @Column({
+    type: 'enum',
+    enum: DigitalContentType,
+    nullable: true,
+    name: 'digital_content_type',
+  })
+  digitalContentType?: DigitalContentType; // 'url' ou 'upload'
 
   @Column('jsonb', { nullable: true })
   specifications?: Record<string, any>;

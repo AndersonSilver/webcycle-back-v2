@@ -7,10 +7,9 @@ import {
   IsArray,
   Min,
   Max,
-  IsUrl,
   IsObject,
 } from 'class-validator';
-import { ProductType } from '../entities/Product.entity';
+import { ProductType, DigitalContentType } from '../entities/Product.entity';
 
 export class CreateProductDto {
   @IsString()
@@ -49,8 +48,11 @@ export class CreateProductDto {
   @IsOptional()
   stock?: number;
 
+  @IsEnum(DigitalContentType)
+  @IsOptional()
+  digitalContentType?: DigitalContentType;
+
   @IsString()
-  @IsUrl()
   @IsOptional()
   digitalFileUrl?: string;
 
@@ -119,8 +121,11 @@ export class UpdateProductDto {
   @IsOptional()
   active?: boolean;
 
+  @IsEnum(DigitalContentType)
+  @IsOptional()
+  digitalContentType?: DigitalContentType;
+
   @IsString()
-  @IsUrl()
   @IsOptional()
   digitalFileUrl?: string;
 
