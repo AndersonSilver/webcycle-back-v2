@@ -412,7 +412,7 @@ export class TrackingService {
         [ShippingStatus.EXCEPTION]: 'Exceção no envio',
       };
 
-      const statusMessage = statusMessages[newStatus] || 'Status atualizado';
+      const statusMessage = statusMessages[_newStatus] || 'Status atualizado';
       const productName = productPurchase.product?.title || 'Produto';
 
       const html = `

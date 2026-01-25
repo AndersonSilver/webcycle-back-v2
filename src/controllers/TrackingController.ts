@@ -142,34 +142,7 @@ export class TrackingController {
     }
   }
 
-  private async getTrackingByCode(req: Request, res: Response) {
-    try {
-      const { code } = req.params;
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-
-      const tracking = await this.trackingService.getTrackingByCode(code);
-
-      if (!tracking) {
-        return res.status(404).json({ error: 'Tracking não encontrado' });
-      }
-
-      // Verificar se o usuário tem permissão
-      if (userRole !== UserRole.ADMIN && tracking.productPurchase.purchase.userId !== userId) {
-        return res.status(403).json({ error: 'Acesso negado' });
-      }
-
-      return res.json(tracking);
-    } catch (error) {
-      console.error('Erro ao buscar tracking por código:', error);
-      return res.status(500).json({ error: 'Erro ao buscar tracking por código' });
-    }
-  }
-
-  private async updateTracking(_req: Request, _res: Response) {
-    // Método não utilizado - mantido para compatibilidade
-    return;
-  }
+  // Métodos removidos - não estão sendo usados nas rotas
 
   private async addTrackingCode(req: Request, res: Response) {
     try {
@@ -196,10 +169,10 @@ export class TrackingController {
         carrier?.trim() || undefined
       );
 
-      res.status(201).json(tracking);
+      return res.status(201).json(tracking);
     } catch (error) {
       console.error('Erro ao criar tracking:', error);
-      res.status(500).json({ error: 'Erro ao criar tracking' });
+      return res.status(500).json({ error: 'Erro ao criar tracking' });
     }
   }
 

@@ -2,8 +2,7 @@ import { Request, Response, Router } from 'express';
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
-import { ProductPurchase } from '../entities/ProductPurchase.entity';
-import { Product, ProductType } from '../entities/Product.entity';
+import { ProductType } from '../entities/Product.entity';
 import { PaymentService } from '../services/PaymentService';
 import { emailService } from '../services/EmailService';
 
