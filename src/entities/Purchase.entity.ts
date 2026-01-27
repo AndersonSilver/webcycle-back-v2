@@ -62,6 +62,28 @@ export class Purchase {
   @Column('uuid', { nullable: true })
   couponId?: string;
 
+  // Endereço de envio (para produtos físicos)
+  @Column({ nullable: true, name: 'shipping_street' })
+  shippingStreet?: string;
+
+  @Column({ nullable: true, name: 'shipping_number' })
+  shippingNumber?: string;
+
+  @Column({ nullable: true, name: 'shipping_complement' })
+  shippingComplement?: string;
+
+  @Column({ nullable: true, name: 'shipping_neighborhood' })
+  shippingNeighborhood?: string;
+
+  @Column({ nullable: true, name: 'shipping_city' })
+  shippingCity?: string;
+
+  @Column({ nullable: true, name: 'shipping_state' })
+  shippingState?: string;
+
+  @Column({ nullable: true, name: 'shipping_zip_code' })
+  shippingZipCode?: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 

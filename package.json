@@ -13,6 +13,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
     "migration:create": "typeorm-ts-node-commonjs migration:create",
     "seed:admin": "ts-node src/scripts/createAdmin.ts",
+    "add-profile-fields": "ts-node src/scripts/add-profile-fields.ts",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

@@ -6,8 +6,40 @@ import {
   IsUUID,
   IsObject,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaymentMethod } from '../entities/Purchase.entity';
+
+export class ShippingAddressDto {
+  @IsString()
+  @MinLength(1)
+  street!: string;
+
+  @IsString()
+  @MinLength(1)
+  number!: string;
+
+  @IsString()
+  @IsOptional()
+  complement?: string;
+
+  @IsString()
+  @MinLength(1)
+  neighborhood!: string;
+
+  @IsString()
+  @MinLength(1)
+  city!: string;
+
+  @IsString()
+  @MinLength(2)
+  state!: string;
+
+  @IsString()
+  @MinLength(1)
+  zipCode!: string;
+}
 
 export class CheckoutDto {
   @IsArray()
@@ -28,6 +60,11 @@ export class CheckoutDto {
 
   @IsEnum(PaymentMethod)
   paymentMethod!: PaymentMethod;
+
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  @IsOptional()
+  shippingAddress?: ShippingAddressDto;
 }
 
 export class ConfirmPurchaseDto {

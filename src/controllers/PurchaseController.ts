@@ -54,7 +54,7 @@ export class PurchaseController {
       if (!user) {
         return res.status(401).json({ message: 'Não autenticado' });
       }
-      const { courses: courseIds = [], products: productItems = [], paymentMethod, couponCode } = req.body as CheckoutDto;
+      const { courses: courseIds = [], products: productItems = [], paymentMethod, couponCode, shippingAddress } = req.body as CheckoutDto;
 
       // Validar que pelo menos um item foi selecionado
       if (courseIds.length === 0 && productItems.length === 0) {
@@ -227,6 +227,12 @@ export class PurchaseController {
         });
       }
 
+      // Validar endereço se houver produtos físicos
+      const hasPhysicalProducts = products.some(p => p.type === ProductType.PHYSICAL);
+      if (hasPhysicalProducts && !shippingAddress) {
+        return res.status(400).json({ message: 'Endereço de envio é obrigatório para produtos físicos' });
+      }
+
       // Calcular desconto total (curso + cupom)
       const totalDiscount = (totalOriginal - totalAmount) + discountAmount;
 
@@ -239,6 +245,13 @@ export class PurchaseController {
         paymentMethod,
         paymentStatus: PaymentStatus.PENDING,
         couponId: couponId,
+        shippingStreet: shippingAddress?.street,
+        shippingNumber: shippingAddress?.number,
+        shippingComplement: shippingAddress?.complement,
+        shippingNeighborhood: shippingAddress?.neighborhood,
+        shippingCity: shippingAddress?.city,
+        shippingState: shippingAddress?.state,
+        shippingZipCode: shippingAddress?.zipCode,
       });
 
       const savedPurchase = await this.purchaseRepository.save(purchase);

@@ -111,8 +111,17 @@ export class AuthService {
       throw new Error('Usuário não encontrado');
     }
 
-    if (updateData.name) user.name = updateData.name;
-    if (updateData.avatar) user.avatar = updateData.avatar;
+    if (updateData.name !== undefined) user.name = updateData.name;
+    if (updateData.avatar !== undefined) user.avatar = updateData.avatar;
+    if (updateData.phone !== undefined) user.phone = updateData.phone;
+    if (updateData.document !== undefined) user.document = updateData.document;
+    if (updateData.addressStreet !== undefined) user.addressStreet = updateData.addressStreet;
+    if (updateData.addressNumber !== undefined) user.addressNumber = updateData.addressNumber;
+    if (updateData.addressComplement !== undefined) user.addressComplement = updateData.addressComplement;
+    if (updateData.addressNeighborhood !== undefined) user.addressNeighborhood = updateData.addressNeighborhood;
+    if (updateData.addressCity !== undefined) user.addressCity = updateData.addressCity;
+    if (updateData.addressState !== undefined) user.addressState = updateData.addressState;
+    if (updateData.addressZipCode !== undefined) user.addressZipCode = updateData.addressZipCode;
 
     await this.userRepository.save(user);
     return this.sanitizeUser(user);

@@ -30,6 +30,42 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   avatar?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  document?: string;
+
+  @IsString()
+  @IsOptional()
+  addressStreet?: string;
+
+  @IsString()
+  @IsOptional()
+  addressNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  addressComplement?: string;
+
+  @IsString()
+  @IsOptional()
+  addressNeighborhood?: string;
+
+  @IsString()
+  @IsOptional()
+  addressCity?: string;
+
+  @IsString()
+  @IsOptional()
+  addressState?: string;
+
+  @IsString()
+  @IsOptional()
+  addressZipCode?: string;
 }
 
 export class ChangePasswordDto {

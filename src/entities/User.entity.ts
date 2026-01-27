@@ -51,6 +51,33 @@ export class User {
   @Column({ nullable: true })
   avatar?: string;
 
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  document?: string; // CPF/CNPJ
+
+  @Column({ name: 'address_street', nullable: true })
+  addressStreet?: string;
+
+  @Column({ name: 'address_number', nullable: true })
+  addressNumber?: string;
+
+  @Column({ name: 'address_complement', nullable: true })
+  addressComplement?: string;
+
+  @Column({ name: 'address_neighborhood', nullable: true })
+  addressNeighborhood?: string;
+
+  @Column({ name: 'address_city', nullable: true })
+  addressCity?: string;
+
+  @Column({ name: 'address_state', nullable: true })
+  addressState?: string;
+
+  @Column({ name: 'address_zip_code', nullable: true })
+  addressZipCode?: string;
+
   @Column({ default: false })
   emailVerified!: boolean;
 
