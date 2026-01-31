@@ -10,7 +10,6 @@ import { Progress } from '../entities/Progress.entity';
 import { Coupon } from '../entities/Coupon.entity';
 import { Review } from '../entities/Review.entity';
 import { CartItem } from '../entities/CartItem.entity';
-import { Certificate } from '../entities/Certificate.entity';
 import { Favorite } from '../entities/Favorite.entity';
 import { UserNotification } from '../entities/UserNotification.entity';
 import { Refund } from '../entities/Refund.entity';
@@ -29,6 +28,7 @@ import { ProductPurchase } from '../entities/ProductPurchase.entity';
 import { ShippingTracking } from '../entities/ShippingTracking.entity';
 import { TrackingEvent } from '../entities/TrackingEvent.entity';
 import { ProductReview } from '../entities/ProductReview.entity';
+import { SaleNotificationRecipient } from '../entities/SaleNotificationRecipient.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -50,7 +50,6 @@ export const AppDataSource = new DataSource({
     Coupon,
     Review,
     CartItem,
-    Certificate,
     Favorite,
     UserNotification,
     Refund,
@@ -69,6 +68,7 @@ export const AppDataSource = new DataSource({
     ShippingTracking,
     TrackingEvent,
     ProductReview,
+    SaleNotificationRecipient,
   ],
   migrations: ['src/migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],

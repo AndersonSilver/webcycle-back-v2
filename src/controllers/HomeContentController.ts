@@ -208,7 +208,7 @@ export class HomeContentController {
             icon: 'Award',
             title: 'Instrutores Especialistas',
             description:
-              'Aprenda com psicólogos, terapeutas e professores certificados',
+              'Aprenda com psicólogos, terapeutas e professores qualificados',
             gradientColors: { from: 'teal-500', to: 'teal-600' },
           },
           {
@@ -263,10 +263,10 @@ export class HomeContentController {
             iconColor: 'green-400',
           },
           {
-            icon: 'Award',
-            title: 'Certificados',
-            subtitle: 'Reconhecidos',
-            iconColor: 'yellow-400',
+            icon: 'MessageCircle',
+            title: 'Suporte Especializado',
+            subtitle: 'Sempre que precisar',
+            iconColor: 'blue-400',
           },
         ],
       },

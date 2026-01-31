@@ -9,7 +9,10 @@ import { Module } from '../entities/Module.entity';
 import { Lesson } from '../entities/Lesson.entity';
 import { Progress } from '../entities/Progress.entity';
 import { UserNotification } from '../entities/UserNotification.entity';
+import { SaleNotificationRecipient } from '../entities/SaleNotificationRecipient.entity';
 import { AuthMiddleware } from '../middleware/AuthMiddleware';
+import { validateDto } from '../middleware/ValidationMiddleware';
+import { UpdateSaleNotificationSettingsDto } from '../dto/sale-notification.dto';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,6 +33,7 @@ export class AdminController {
   private lessonRepository: Repository<Lesson>;
   private progressRepository: Repository<Progress>;
   private notificationRepository: Repository<UserNotification>;
+  private saleNotificationRepository: Repository<SaleNotificationRecipient>;
 
   constructor() {
     this.router = Router();
@@ -41,6 +45,7 @@ export class AdminController {
     this.lessonRepository = AppDataSource.getRepository(Lesson);
     this.progressRepository = AppDataSource.getRepository(Progress);
     this.notificationRepository = AppDataSource.getRepository(UserNotification);
+    this.saleNotificationRepository = AppDataSource.getRepository(SaleNotificationRecipient);
     this.setupRoutes();
   }
 
@@ -86,6 +91,90 @@ export class AdminController {
     // Listagens básicas
     this.router.get('/students', this.getStudents.bind(this));
     this.router.get('/purchases', this.getPurchases.bind(this));
+
+    // Configurações de email de vendas
+    this.router.get('/sale-email-settings', this.getSaleEmailSettings.bind(this));
+    this.router.put('/sale-email-settings', validateDto(UpdateSaleNotificationSettingsDto), this.updateSaleEmailSettings.bind(this));
+  }
+
+  private async getSaleEmailSettings(_req: Request, res: Response) {
+    try {
+      const recipients = await this.saleNotificationRepository.find({
+        order: { createdAt: 'ASC' },
+      });
+
+      const active = recipients.length === 0 ? true : recipients.every((item) => item.active);
+
+      return res.json({
+        active,
+        recipients: recipients.map((item) => ({
+          email: item.email,
+          createdAt: item.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  private async updateSaleEmailSettings(req: Request, res: Response) {
+    try {
+      const updateData: UpdateSaleNotificationSettingsDto = req.body;
+
+      const normalizedEmails = Array.from(
+        new Set(
+          (updateData.recipientEmails || [])
+            .map((email) => email.trim().toLowerCase())
+            .filter((email) => email.length > 0)
+        )
+      );
+
+      const existingRecipients = await this.saleNotificationRepository.find();
+      const existingEmails = new Set(existingRecipients.map((item) => item.email));
+
+      const recipientsToAdd = normalizedEmails.filter((email) => !existingEmails.has(email));
+      const recipientsToKeep = new Set(normalizedEmails);
+
+      if (recipientsToAdd.length > 0) {
+        const newRecipients = recipientsToAdd.map((email) =>
+          this.saleNotificationRepository.create({
+            email,
+            active: updateData.active !== undefined ? updateData.active : true,
+          })
+        );
+        await this.saleNotificationRepository.save(newRecipients);
+      }
+
+      const recipientsToRemove = existingRecipients.filter((item) => !recipientsToKeep.has(item.email));
+      if (recipientsToRemove.length > 0) {
+        await this.saleNotificationRepository.remove(recipientsToRemove);
+      }
+
+      if (updateData.active !== undefined) {
+        await this.saleNotificationRepository
+          .createQueryBuilder()
+          .update(SaleNotificationRecipient)
+          .set({ active: updateData.active })
+          .execute();
+      }
+
+      const updatedRecipients = await this.saleNotificationRepository.find({
+        order: { createdAt: 'ASC' },
+      });
+
+      return res.json({
+        message: 'Configurações de email de vendas atualizadas',
+        settings: {
+          active: updatedRecipients.length === 0 ? true : updatedRecipients.every((item) => item.active),
+          recipients: updatedRecipients.map((item) => ({
+            email: item.email,
+            createdAt: item.createdAt,
+          })),
+        },
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
   }
 
   private async getDashboard(_req: Request, res: Response) {

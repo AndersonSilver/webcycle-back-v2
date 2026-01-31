@@ -189,7 +189,7 @@ class EmailService {
               </p>
               ${unsubscribeSection}
               <p style="margin-top: 16px; font-size: 11px; color: #9ca3af;">
-                © ${new Date().getFullYear()} WebCycle. Todos os direitos reservados.
+                © ${new Date().getFullYear()} Culture Builders. Todos os direitos reservados.
               </p>
             </div>
           </div>
@@ -283,19 +283,18 @@ class EmailService {
     const trackingId = uuidv4();
     const content = `
       <p>Olá <strong>${userName}</strong>,</p>
-      <p>É um prazer ter você conosco! Estamos muito felizes em fazer parte da sua jornada de aprendizado em psicologia aplicada.</p>
+      <p>É um prazer ter você conosco! Estamos muito felizes em fazer parte da sua jornada de aprendizado em Culture Builders.</p>
       
       <h2>🎯 O que você pode fazer agora:</h2>
       <ul>
         <li>Explorar nossos cursos especializados</li>
         <li>Adicionar podcasts gratuitos aos seus cursos</li>
         <li>Acompanhar seu progresso de aprendizado</li>
-        <li>Receber certificados ao concluir cursos</li>
       </ul>
       
       <p>Se tiver alguma dúvida, nossa equipe está sempre pronta para ajudar!</p>
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -310,7 +309,7 @@ class EmailService {
 
     await this.sendEmail({
       to: userEmail,
-      subject: 'Bem-vindo(a) à Plataforma de Cursos de Psicologia! 🎓',
+      subject: 'Bem-vindo(a) à Plataforma de Cursos de Culture Builders! 🎓',
       html,
       trackingId,
     });
@@ -341,7 +340,7 @@ class EmailService {
       const physicalProducts = products.filter((p) => p.type === 'physical');
 
       if (digitalProducts.length > 0) {
-        productsList += '<h4>📚 Produtos Digitais:</h4><ul>';
+        productsList += '<h4>📚 Produtos:</h4><ul>';
         productsList += digitalProducts
           .map((product) => {
             const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
@@ -352,7 +351,7 @@ class EmailService {
       }
 
       if (physicalProducts.length > 0) {
-        productsList += '<h4>📦 Produtos Físicos:</h4><ul>';
+        productsList += '<h4>📦 Produtos:</h4><ul>';
         productsList += physicalProducts
           .map((product) => {
             const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
@@ -360,7 +359,7 @@ class EmailService {
           })
           .join('');
         productsList += '</ul>';
-        productsList += '<p style="margin-top: 15px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><strong>📦 Envio:</strong> Seus produtos físicos serão enviados pelos Correios. Você receberá um código de rastreamento por email assim que o produto for postado.</p>';
+        productsList += '<p style="margin-top: 15px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><strong>📦 Envio:</strong> Seus produtos serão enviados pelos Correios. Você receberá o comprovante de pagamento na plataforma assim que o produto for postado.</p>';
       }
     }
 
@@ -401,7 +400,7 @@ class EmailService {
       
       ${hasDigitalContent ? '<p>Bons estudos! 🎓</p>' : ''}
       
-      <p>Abraços,<br><strong>Equipe PSICO</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const ctaLink = hasDigitalContent 
@@ -434,7 +433,7 @@ class EmailService {
     purchaseId: string
   ): Promise<void> {
     const trackingId = uuidv4();
-    const adminEmail = env.smtpFrom || env.smtpUser || 'admin@psicoedu.com';
+    const adminEmail = env.smtpFrom || env.smtpUser || 'admin@culturebuilders.com';
     
     const productsList = products
       .map((product) => {
@@ -463,7 +462,7 @@ class EmailService {
       <ol>
         <li>Preparar os produtos para envio</li>
         <li>Postar nos Correios</li>
-        <li>Adicionar o código de rastreamento na compra</li>
+        <li>Adicionar o comprovante de envio na compra</li>
       </ol>
       
       <p style="margin-top: 20px;">
@@ -473,13 +472,13 @@ class EmailService {
         </a>
       </p>
       
-      <p>Abraços,<br><strong>Sistema PSICO</strong></p>
+      <p>Abraços,<br><strong>Sistema Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
       '#f59e0b',
       '#d97706',
-      '📦 Nova Compra de Produto Físico',
+      '📦 Nova Compra de Produto',
       content,
       undefined,
       undefined,
@@ -488,7 +487,92 @@ class EmailService {
 
     await this.sendEmail({
       to: adminEmail,
-      subject: `📦 Nova Compra de Produto Físico - ${userName}`,
+      subject: `📦 Nova Compra de Produto - ${userName}`,
+      html,
+      trackingId,
+    });
+  }
+
+  async sendAdminSaleNotification(
+    recipients: string[],
+    userEmail: string,
+    userName: string,
+    courses: Array<{ title: string; price: number }>,
+    totalAmount: number,
+    products?: Array<{ title: string; price: number; quantity: number; type: string }>,
+    purchaseId?: string
+  ): Promise<void> {
+    const trackingId = uuidv4();
+    const adminEmailList = recipients.filter((email) => email && email.trim().length > 0);
+    if (adminEmailList.length === 0) {
+      return;
+    }
+
+    const coursesList = courses.length > 0
+      ? courses
+          .map((course) => {
+            const price = typeof course.price === 'string' ? parseFloat(course.price) : course.price;
+            return `<li><strong>${course.title}</strong> - R$ ${price.toFixed(2)}</li>`;
+          })
+          .join('')
+      : '';
+
+    const productsList = products && products.length > 0
+      ? products
+          .map((product) => {
+            const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+            return `<li><strong>${product.title}</strong> (${product.quantity}x) - R$ ${(price * product.quantity).toFixed(2)}</li>`;
+          })
+          .join('')
+      : '';
+
+    const content = `
+      <p>Olá,</p>
+      <p>Uma nova venda foi confirmada na plataforma.</p>
+
+      <div style="margin: 20px 0; padding: 15px; background-color: #eef2ff; border-left: 4px solid #6366f1; border-radius: 4px;">
+        <p><strong>Cliente:</strong> ${userName} (${userEmail})</p>
+        ${purchaseId ? `<p><strong>ID da Compra:</strong> ${purchaseId}</p>` : ''}
+      </div>
+
+      ${coursesList ? `
+      <div class="course-list" style="margin: 20px 0; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+        <h3 style="margin-top: 0;">🎓 Cursos:</h3>
+        <ul style="margin: 10px 0;">
+          ${coursesList}
+        </ul>
+      </div>
+      ` : ''}
+
+      ${productsList ? `
+      <div class="product-list" style="margin: 20px 0; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+        <h3 style="margin-top: 0;">📦 Produtos:</h3>
+        <ul style="margin: 10px 0;">
+          ${productsList}
+        </ul>
+      </div>
+      ` : ''}
+
+      <div style="margin: 20px 0; padding: 15px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+        <strong>Total: R$ ${(typeof totalAmount === 'string' ? parseFloat(totalAmount) : totalAmount).toFixed(2)}</strong>
+      </div>
+
+      <p>Abraços,<br><strong>Sistema Culture Builders</strong></p>
+    `;
+
+    const html = this.getBaseTemplate(
+      '#6366f1',
+      '#3b82f6',
+      '💰 Nova Venda Confirmada',
+      content,
+      undefined,
+      undefined,
+      '#6366f1'
+    );
+
+    await this.sendEmail({
+      to: adminEmailList.join(','),
+      subject: `💰 Nova Venda - ${userName}`,
       html,
       trackingId,
     });
@@ -503,13 +587,13 @@ class EmailService {
       <p>Obrigado por se inscrever na nossa newsletter!</p>
       <p>Agora você receberá:</p>
       <ul>
-        <li>✨ Dicas exclusivas sobre psicologia aplicada</li>
+        <li>✨ Dicas exclusivas sobre Culture Builderslogia aplicada</li>
         <li>📚 Artigos e conteúdos educativos</li>
         <li>🎓 Novidades sobre novos cursos</li>
         <li>💡 E muito mais!</li>
       </ul>
       <p>Fique de olho na sua caixa de entrada!</p>
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -627,8 +711,7 @@ class EmailService {
   async sendCourseCompletionEmail(
     userEmail: string,
     userName: string,
-    courseTitle: string,
-    courseId: string
+    courseTitle: string
   ): Promise<void> {
     const trackingId = uuidv4();
     const content = `
@@ -638,7 +721,6 @@ class EmailService {
       <div class="info-box">
         <h3>🎓 Próximos Passos:</h3>
         <ul>
-          <li>Gere seu certificado de conclusão</li>
           <li>Compartilhe sua conquista nas redes sociais</li>
           <li>Explore outros cursos relacionados</li>
           <li>Deixe uma avaliação sobre o curso</li>
@@ -647,7 +729,7 @@ class EmailService {
       
       <p>Continue aprendendo e evoluindo! 🚀</p>
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -655,62 +737,14 @@ class EmailService {
       '#7c3aed',
       '🎉 Curso Concluído!',
       content,
-      'Gerar Certificado',
-      `${env.frontendUrl || 'http://localhost:5173'}/curso/${courseId}`,
+      'Ver Meus Cursos',
+      `${env.frontendUrl || 'http://localhost:5173'}/meus-cursos`,
       '#8b5cf6'
     );
 
     await this.sendEmail({
       to: userEmail,
       subject: `Parabéns! Você concluiu o curso: ${courseTitle} 🎓`,
-      html,
-      trackingId,
-    });
-  }
-
-  /**
-   * Email de certificado gerado
-   */
-  async sendCertificateEmail(
-    userEmail: string,
-    userName: string,
-    courseTitle: string,
-    certificateNumber: string,
-    certificateId: string,
-    verificationCode: string
-  ): Promise<void> {
-    const trackingId = uuidv4();
-    const content = `
-      <p>Olá <strong>${userName}</strong>,</p>
-      <p>Seu certificado do curso <strong>${courseTitle}</strong> está pronto! 🎓</p>
-      
-      <div class="info-box">
-        <h3>📜 Detalhes do Certificado:</h3>
-        <ul>
-          <li><strong>Número:</strong> ${certificateNumber}</li>
-          <li><strong>Código de Verificação:</strong> ${verificationCode}</li>
-          <li><strong>Curso:</strong> ${courseTitle}</li>
-        </ul>
-      </div>
-      
-      <p>Você pode baixar seu certificado em PDF e compartilhar sua conquista!</p>
-      
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
-    `;
-
-    const html = this.getBaseTemplate(
-      '#ec4899',
-      '#db2777',
-      '📜 Certificado Gerado!',
-      content,
-      'Baixar Certificado',
-      `${env.frontendUrl || 'http://localhost:5173'}/certificados/${certificateId}/download`,
-      '#ec4899'
-    );
-
-    await this.sendEmail({
-      to: userEmail,
-      subject: `Seu certificado está pronto: ${courseTitle} 📜`,
       html,
       trackingId,
     });
@@ -734,7 +768,6 @@ class EmailService {
       <div class="info-box">
         <h3>💡 Por que continuar?</h3>
         <ul>
-          <li>Complete seu aprendizado e receba o certificado</li>
           <li>Adquira novos conhecimentos e habilidades</li>
           <li>Mantenha o ritmo de estudos constante</li>
           <li>Alcance seus objetivos profissionais</li>
@@ -743,7 +776,7 @@ class EmailService {
       
       <p>Volte hoje e continue de onde parou! 📚</p>
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -804,7 +837,7 @@ class EmailService {
         : '<p>Se você tiver alguma dúvida ou quiser mais informações, entre em contato conosco.</p>'
       }
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -852,7 +885,7 @@ class EmailService {
         <li>Nunca compartilhe este link com ninguém</li>
       </ul>
       
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(
@@ -885,7 +918,7 @@ class EmailService {
       <p>Olá <strong>${userName}</strong>,</p>
       <p>${message}</p>
       ${link ? '<p>Clique no botão abaixo para mais detalhes.</p>' : ''}
-      <p>Abraços,<br><strong>Equipe WebCycle</strong></p>
+      <p>Abraços,<br><strong>Equipe Culture Builders</strong></p>
     `;
 
     const html = this.getBaseTemplate(

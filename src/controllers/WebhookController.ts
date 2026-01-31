@@ -5,10 +5,12 @@ import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
 import { ProductType } from '../entities/Product.entity';
 import { PaymentService } from '../services/PaymentService';
 import { emailService } from '../services/EmailService';
+import { SaleNotificationRecipient } from '../entities/SaleNotificationRecipient.entity';
 
 export class WebhookController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
+  private saleNotificationRepository: Repository<SaleNotificationRecipient>;
   private paymentService: PaymentService;
   // Cache para evitar processar o mesmo payment_id múltiplas vezes em sequência
   private processedPayments: Set<string> = new Set();
@@ -18,6 +20,7 @@ export class WebhookController {
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
+    this.saleNotificationRepository = AppDataSource.getRepository(SaleNotificationRecipient);
     this.paymentService = new PaymentService();
     this.setupRoutes();
     
@@ -402,6 +405,28 @@ export class WebhookController {
               } catch (error) {
                 console.error('Erro ao enviar email para admin sobre produtos físicos:', error);
               }
+            }
+
+            // Enviar email para admin sobre venda (configurável)
+            try {
+              const recipients = await this.saleNotificationRepository.find({
+                where: { active: true },
+                order: { createdAt: 'ASC' },
+              });
+              const recipientEmails = recipients.map((item) => item.email);
+              if (recipientEmails.length > 0) {
+                await emailService.sendAdminSaleNotification(
+                  recipientEmails,
+                  completePurchase.user.email,
+                  completePurchase.user.name,
+                  courses,
+                  totalAmount,
+                  products,
+                  completePurchase.id
+                );
+              }
+            } catch (error) {
+              console.error('Erro ao enviar email de venda para admin:', error);
             }
             
             // Marcar como enviado e atualizar timestamp

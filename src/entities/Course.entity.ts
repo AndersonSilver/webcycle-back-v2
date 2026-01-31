@@ -14,7 +14,6 @@ import { Progress } from './Progress.entity';
 import { Review } from './Review.entity';
 import { CartItem } from './CartItem.entity';
 import { Coupon } from './Coupon.entity';
-import { Certificate } from './Certificate.entity';
 import { Favorite } from './Favorite.entity';
 import { ShareToken } from './ShareToken.entity';
 
@@ -99,8 +98,6 @@ export class Course {
   @JoinTable({ name: 'coupon_courses' })
   coupons!: Coupon[];
 
-  @OneToMany(() => Certificate, (certificate) => certificate.course)
-  certificates!: Certificate[];
 
   @OneToMany(() => Favorite, (favorite) => favorite.course)
   favorites!: Favorite[];

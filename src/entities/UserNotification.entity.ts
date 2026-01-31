@@ -12,7 +12,6 @@ import { User } from './User.entity';
 export enum NotificationType {
   PURCHASE_CONFIRMED = 'purchase_confirmed',
   COURSE_AVAILABLE = 'course_available',
-  CERTIFICATE_READY = 'certificate_ready',
   NEW_CONTENT = 'new_content',
   REMINDER = 'reminder',
 }

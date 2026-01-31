@@ -12,7 +12,6 @@ import { Progress } from './Progress.entity';
 import { Review } from './Review.entity';
 import { ProductReview } from './ProductReview.entity';
 import { CartItem } from './CartItem.entity';
-import { Certificate } from './Certificate.entity';
 import { Favorite } from './Favorite.entity';
 import { UserNotification } from './UserNotification.entity';
 import { Refund } from './Refund.entity';
@@ -102,8 +101,6 @@ export class User {
   @OneToMany(() => CartItem, (cartItem) => cartItem.user)
   cartItems!: CartItem[];
 
-  @OneToMany(() => Certificate, (certificate) => certificate.user)
-  certificates!: Certificate[];
 
   @OneToMany(() => Favorite, (favorite) => favorite.user)
   favorites!: Favorite[];

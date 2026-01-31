@@ -192,8 +192,7 @@ export class ProgressController {
             await emailService.sendCourseCompletionEmail(
               userForEmail.email,
               userForEmail.name,
-              course.title,
-              courseId
+              course.title
             );
             console.log(`📧 Email de conclusão de curso enviado para: ${userForEmail.email}`);
           }
