@@ -60,6 +60,16 @@ export class HomePageContent {
     features: Array<{ text: string }>;
   };
 
+  // Landing (/landing) — banners clicáveis
+  @Column('jsonb', { nullable: true })
+  landingBanners?: Array<{
+    id: string;
+    imageUrl: string;
+    alt: string;
+    link: string;
+    order: number;
+  }>;
+
   // CTA Section
   @Column('jsonb', { nullable: true })
   cta?: {

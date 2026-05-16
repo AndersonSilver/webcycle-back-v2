@@ -133,6 +133,15 @@ export class HomeContentController {
       if (updateData.cta !== undefined) {
         content.cta = updateData.cta;
       }
+      if (updateData.landingBanners !== undefined) {
+        content.landingBanners = updateData.landingBanners.map((item, index) => ({
+          id: item.id || `landing-${Date.now()}-${index}`,
+          imageUrl: item.imageUrl,
+          alt: item.alt,
+          link: item.link,
+          order: item.order,
+        }));
+      }
 
       await this.homeContentRepository.save(content);
 

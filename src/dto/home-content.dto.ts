@@ -24,6 +24,24 @@ class CarouselItemDto {
   order!: number;
 }
 
+class LandingBannerItemDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsString()
+  imageUrl!: string;
+
+  @IsString()
+  alt!: string;
+
+  @IsString()
+  link!: string;
+
+  @IsNumber()
+  order!: number;
+}
+
 class CardDto {
   @IsString()
   icon!: string;
@@ -173,5 +191,11 @@ export class UpdateHomeContentDto {
   @ValidateNested()
   @Type(() => CtaDto)
   cta?: CtaDto;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LandingBannerItemDto)
+  landingBanners?: LandingBannerItemDto[];
 }
 
