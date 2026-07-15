@@ -316,7 +316,18 @@ export class SupportController {
 
   private async getMessages(req: Request, res: Response) {
     try {
+      const userId = (req.user as any).id;
+      const userRole = (req.user as any).role;
       const { id } = req.params;
+
+      const ticket = await this.ticketRepository.findOne({ where: { id } });
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket não encontrado' });
+      }
+      if (ticket.userId !== userId && userRole !== 'admin') {
+        return res.status(403).json({ message: 'Acesso negado' });
+      }
+
       const messages = await this.messageRepository.find({
         where: { ticketId: id },
         relations: ['sender'],

@@ -37,7 +37,8 @@ export const AppDataSource = new DataSource({
   username: env.dbUsername,
   password: env.dbPassword,
   database: env.dbDatabase,
-  synchronize: env.dbSynchronize,
+  // Nunca usar synchronize em produção — só migrations
+  synchronize: env.nodeEnv === 'production' ? false : env.dbSynchronize,
   logging: env.dbLogging,
   entities: [
     User,

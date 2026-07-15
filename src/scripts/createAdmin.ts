@@ -24,8 +24,11 @@ async function createAdmin() {
       return;
     }
 
-    // Criar senha hash
-    const password = process.env.ADMIN_PASSWORD || 'admin123';
+    // Criar senha hash — sem senha default insegura
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password || password.length < 12) {
+      throw new Error('Defina ADMIN_PASSWORD com pelo menos 12 caracteres antes de criar o admin.');
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Criar usuário admin

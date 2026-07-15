@@ -1,4 +1,29 @@
 import { Request, Response, Router } from 'express';
+import { AuthMiddleware } from '../middleware/AuthMiddleware';
+import { env } from '../config/env.config';
+
+function isAllowedRedirectUrl(raw: string): boolean {
+  try {
+    const target = new URL(raw);
+    if (!['http:', 'https:'].includes(target.protocol)) return false;
+    const allowed = new Set<string>();
+    try {
+      if (env.frontendUrl) allowed.add(new URL(env.frontendUrl).hostname);
+    } catch { /* ignore */ }
+    (env.corsOrigin || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
+      .forEach((o) => {
+        try {
+          allowed.add(new URL(o).hostname);
+        } catch { /* ignore */ }
+      });
+    return allowed.has(target.hostname);
+  } catch {
+    return false;
+  }
+}
 
 // Interface para tracking de emails (pode ser expandida para usar uma tabela no futuro)
 interface EmailTracking {
@@ -29,7 +54,12 @@ export class EmailTrackingController {
     this.router.get('/click/:trackingId', this.trackClick.bind(this));
     
     // Rota para obter estatísticas (admin)
-    this.router.get('/stats/:trackingId', this.getStats.bind(this));
+    this.router.get(
+      '/stats/:trackingId',
+      AuthMiddleware.authenticate,
+      AuthMiddleware.requireAdmin,
+      this.getStats.bind(this)
+    );
   }
 
   /**
@@ -82,23 +112,21 @@ export class EmailTrackingController {
         return res.status(400).json({ message: 'URL não fornecida' });
       }
 
+      if (!isAllowedRedirectUrl(url)) {
+        return res.status(400).json({ message: 'URL de redirecionamento não permitida' });
+      }
+
       // Registrar clique
       const tracking = emailTracking.get(trackingId);
       if (tracking) {
         tracking.clickedAt = new Date();
         tracking.clickedLink = url;
         emailTracking.set(trackingId, tracking);
-        console.log(`🔗 Link clicado: ${url} - Email: ${tracking.email} - Tracking ID: ${trackingId}`);
       }
 
-      // Redirecionar para URL original
       return res.redirect(url);
     } catch (error: any) {
       console.error('Erro ao rastrear clique:', error);
-      const { url } = req.query;
-      if (url && typeof url === 'string') {
-        return res.redirect(url);
-      }
       return res.status(500).json({ message: 'Erro ao processar clique' });
     }
   }

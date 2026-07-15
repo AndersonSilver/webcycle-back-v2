@@ -40,15 +40,18 @@ export class WebhookController {
     this.router.post('/mercadopago', this.mercadopagoWebhook.bind(this));
   }
 
-  private async mercadopagoWebhook(req: Request, res: Response) {
+  private async mercadopagoWebhook(req: Request, res: Response): Promise<void> {
     console.log('🎯 [WEBHOOK CONTROLLER] Handler chamado');
-    console.log('🎯 [WEBHOOK CONTROLLER] Method:', req.method);
-    console.log('🎯 [WEBHOOK CONTROLLER] URL:', req.url);
-    console.log('🎯 [WEBHOOK CONTROLLER] Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('🎯 [WEBHOOK CONTROLLER] Body:', JSON.stringify(req.body, null, 2));
-    console.log('🎯 [WEBHOOK CONTROLLER] Query:', JSON.stringify(req.query, null, 2));
     
     try {
+      const { validateMercadoPagoWebhookSignature } = await import('../utils/mercadopagoWebhook');
+      const signatureCheck = validateMercadoPagoWebhookSignature(req);
+      if (!signatureCheck.valid) {
+        console.error('❌ [WEBHOOK] Assinatura rejeitada:', signatureCheck.reason);
+        res.status(401).json({ error: 'Assinatura inválida' });
+        return;
+      }
+
       // Responder imediatamente para evitar timeout do Mercado Pago
       console.log('✅ [WEBHOOK CONTROLLER] Enviando resposta 200');
       res.status(200).json({ received: true });
@@ -56,8 +59,11 @@ export class WebhookController {
       const data = req.body;
       const query = req.query;
       
-      // Log para debug
-      console.log('🔔 Webhook recebido do Mercado Pago:', JSON.stringify(data, null, 2));
+      console.log('🔔 Webhook Mercado Pago recebido', {
+        type: data?.type,
+        topic: data?.topic || query.topic,
+        action: data?.action,
+      });
 
       // Mercado Pago pode enviar webhooks em diferentes formatos:
       // Formato 1: Body com { type: 'payment', data: { id: '123' } }
@@ -162,11 +168,9 @@ export class WebhookController {
               
               if (purchase) {
                 console.log(`✅ Compra encontrada pelo external_reference: ${purchase.id}`);
-                // Atualizar status baseado no status da merchant_order
+                // Nunca promover a PAID só por merchant_order "closed" sem payment approved
                 let status: PaymentStatus = PaymentStatus.PENDING;
-                if (merchantOrder.status === 'closed') {
-                  status = PaymentStatus.PAID;
-                } else if (merchantOrder.status === 'expired') {
+                if (merchantOrder.status === 'expired') {
                   status = PaymentStatus.FAILED;
                 }
                 

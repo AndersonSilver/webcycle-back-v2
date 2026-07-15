@@ -5,6 +5,7 @@ import { Product, ProductType } from '../entities/Product.entity';
 import { AuthMiddleware } from '../middleware/AuthMiddleware';
 import { validateDto } from '../middleware/ValidationMiddleware';
 import { CreateProductDto, UpdateProductDto } from '../dto/product.dto';
+import { sanitizeProductPublic, sanitizeProductsPublic } from '../utils/sanitizePublic';
 
 export class ProductController {
   private router: Router;
@@ -60,7 +61,7 @@ export class ProductController {
       const [products, total] = await queryBuilder.getManyAndCount();
 
       res.json({
-        products,
+        products: sanitizeProductsPublic(products),
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -86,7 +87,7 @@ export class ProductController {
         return res.status(404).json({ error: 'Produto não encontrado' });
       }
 
-      return res.json({ product });
+      return res.json({ product: sanitizeProductPublic(product) });
     } catch (error) {
       console.error('Erro ao buscar produto:', error);
       return res.status(500).json({ error: 'Erro ao buscar produto' });
@@ -110,7 +111,7 @@ export class ProductController {
       });
 
       res.json({
-        products,
+        products: sanitizeProductsPublic(products),
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -145,7 +146,7 @@ export class ProductController {
       });
 
       return res.json({
-        products,
+        products: sanitizeProductsPublic(products),
         pagination: {
           page: pageNum,
           limit: limitNum,

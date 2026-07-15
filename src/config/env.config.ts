@@ -2,6 +2,36 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const INSECURE_DEFAULTS = [
+  'your_super_secret_jwt_key_change_in_production',
+  'your_refresh_secret_key',
+  'your_session_secret',
+];
+
+function assertSecureSecrets() {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  if (nodeEnv !== 'production') return;
+
+  const jwtSecret = process.env.JWT_SECRET || '';
+  const jwtRefresh = process.env.JWT_REFRESH_SECRET || '';
+  const sessionSecret = process.env.SESSION_SECRET || '';
+
+  if (!jwtSecret || INSECURE_DEFAULTS.includes(jwtSecret) || jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET inválido ou ausente em produção (mín. 32 caracteres, sem default).');
+  }
+  if (!jwtRefresh || INSECURE_DEFAULTS.includes(jwtRefresh) || jwtRefresh.length < 32) {
+    throw new Error('JWT_REFRESH_SECRET inválido ou ausente em produção.');
+  }
+  if (!sessionSecret || INSECURE_DEFAULTS.includes(sessionSecret) || sessionSecret.length < 32) {
+    throw new Error('SESSION_SECRET inválido ou ausente em produção.');
+  }
+  if (!process.env.CORS_ORIGIN && !process.env.FRONTEND_URL) {
+    throw new Error('CORS_ORIGIN ou FRONTEND_URL obrigatório em produção.');
+  }
+}
+
+assertSecureSecrets();
+
 export const env = {
   // Database
   dbHost: process.env.DB_HOST || 'localhost',

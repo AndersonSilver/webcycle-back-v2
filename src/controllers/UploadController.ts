@@ -7,6 +7,7 @@ import { AzureStorageService } from '../services/AzureStorageService';
 import { AppDataSource } from '../config/database.config';
 import { Repository } from 'typeorm';
 import { Lesson } from '../entities/Lesson.entity';
+import { Course } from '../entities/Course.entity';
 import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
 import { User } from '../entities/User.entity';
 
@@ -17,12 +18,14 @@ export class UploadController {
   private uploadDocument: multer.Multer;
   private tempDir: string;
   private lessonRepository: Repository<Lesson>;
+  private courseRepository: Repository<Course>;
   private purchaseRepository: Repository<Purchase>;
 
   constructor() {
     this.router = Router();
     this.azureStorage = new AzureStorageService();
     this.lessonRepository = AppDataSource.getRepository(Lesson);
+    this.courseRepository = AppDataSource.getRepository(Course);
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
     
     // Criar diretório temporário se não existir
@@ -277,7 +280,6 @@ export class UploadController {
         return;
       }
 
-      // Verificar acesso à aula se lessonId for fornecido
       if (lessonId) {
         const lesson = await this.lessonRepository.findOne({
           where: { id: lessonId },
@@ -289,17 +291,13 @@ export class UploadController {
           return;
         }
 
-        // Verificar se o vídeo pertence à aula
         if (lesson.videoUrl !== videoUrl) {
           res.status(403).json({ message: 'Vídeo não pertence a esta aula' });
           return;
         }
 
-        // Verificar acesso ao curso
-        let hasAccess = false;
-        if (lesson.free) {
-          hasAccess = true;
-        } else {
+        let hasAccess = user.role === 'admin' || !!lesson.free;
+        if (!hasAccess) {
           const purchase = await this.purchaseRepository
             .createQueryBuilder('purchase')
             .innerJoin('purchase.courses', 'pc')
@@ -313,6 +311,17 @@ export class UploadController {
 
         if (!hasAccess) {
           res.status(403).json({ message: 'Você não tem acesso a este conteúdo' });
+          return;
+        }
+      } else {
+        // Sem lessonId: só trailer oficial do curso (course.videoUrl)
+        const trailerCourse = await this.courseRepository.findOne({
+          where: { videoUrl, active: true },
+        });
+        if (!trailerCourse && user.role !== 'admin') {
+          res.status(403).json({
+            message: 'Streaming sem lessonId só é permitido para trailer de curso',
+          });
           return;
         }
       }

@@ -71,19 +71,25 @@ export class LessonController {
         where: { userId: user.id, lessonId },
       });
 
-      return res.json({
-        lesson: {
-          ...lesson,
-          module: {
-            id: lesson.module.id,
-            title: lesson.module.title,
-            course: {
-              id: lesson.module.course.id,
-              title: lesson.module.course.title,
-            },
+      const isAdmin = user.role === 'admin';
+      const lessonPayload: any = {
+        ...lesson,
+        module: {
+          id: lesson.module.id,
+          title: lesson.module.title,
+          course: {
+            id: lesson.module.course.id,
+            title: lesson.module.course.title,
           },
         },
-        hasAccess,
+      };
+      if (!hasAccess && !isAdmin) {
+        delete lessonPayload.videoUrl;
+      }
+
+      return res.json({
+        lesson: lessonPayload,
+        hasAccess: hasAccess || isAdmin,
         progress: progress
           ? {
               completed: progress.completed,

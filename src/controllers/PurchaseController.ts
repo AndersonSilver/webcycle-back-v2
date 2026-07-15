@@ -457,6 +457,11 @@ export class PurchaseController {
 
   private async confirm(req: Request, res: Response) {
     try {
+      const user = req.user as User;
+      if (!user) {
+        return res.status(401).json({ message: 'Não autenticado' });
+      }
+
       const { id } = req.params;
       const { paymentId } = req.body as ConfirmPurchaseDto;
 
@@ -467,6 +472,10 @@ export class PurchaseController {
 
       if (!purchase) {
         return res.status(404).json({ message: 'Compra não encontrada' });
+      }
+
+      if (purchase.userId !== user.id && user.role !== 'admin') {
+        return res.status(403).json({ message: 'Acesso negado' });
       }
 
       // Para pagamentos via Checkout Pro (cartão), o paymentId é na verdade um pref_id

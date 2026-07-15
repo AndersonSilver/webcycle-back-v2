@@ -88,13 +88,31 @@ export class ModuleController {
         }
       }
 
-      // Adicionar informações de progresso às aulas
-      const lessonsWithProgress = lessons.map(lesson => {
+      // Acesso ao curso (admin, aula free ou compra PAID)
+      let hasCourseAccess = user?.role === 'admin';
+      const courseId = lessons[0]?.module?.courseId;
+      if (!hasCourseAccess && user?.id && courseId) {
+        const { Purchase, PaymentStatus } = await import('../entities/Purchase.entity');
+        const purchaseRepository = AppDataSource.getRepository(Purchase);
+        const purchase = await purchaseRepository
+          .createQueryBuilder('purchase')
+          .innerJoin('purchase.courses', 'pc')
+          .where('purchase.userId = :userId', { userId: user.id })
+          .andWhere('pc.courseId = :courseId', { courseId })
+          .andWhere('purchase.paymentStatus = :status', { status: PaymentStatus.PAID })
+          .getOne();
+        hasCourseAccess = !!purchase;
+      }
+
+      const lessonsWithProgress = lessons.map((lesson) => {
         const progress = progressMap.get(lesson.id);
+        const canSeeVideo = hasCourseAccess || !!lesson.free || user?.role === 'admin';
+        const { videoUrl, ...rest } = lesson as any;
         return {
-          ...lesson,
+          ...rest,
+          ...(canSeeVideo ? { videoUrl } : {}),
           completed: progress?.completed || false,
-          locked: false, // Pode ser calculado baseado na ordem e progresso
+          locked: false,
         };
       });
 

@@ -115,8 +115,9 @@ export class CourseController {
         .take(Number(limit))
         .getManyAndCount();
 
+      const { stripLessonVideoUrlsDeep } = await import('../utils/sanitizePublic');
       return res.json({
-        courses,
+        courses: stripLessonVideoUrlsDeep(courses),
         total,
         page: Number(page),
         limit: Number(limit),
@@ -165,8 +166,9 @@ export class CourseController {
         .take(Number(limit))
         .getManyAndCount();
 
+      const { stripLessonVideoUrlsDeep } = await import('../utils/sanitizePublic');
       return res.json({
-        courses,
+        courses: stripLessonVideoUrlsDeep(courses),
         total,
         page: Number(page),
         limit: Number(limit),

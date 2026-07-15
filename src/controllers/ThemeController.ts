@@ -24,11 +24,13 @@ export class ThemeController {
     this.router.get(
       '/admin',
       AuthMiddleware.authenticate,
+      AuthMiddleware.requireAdmin,
       this.getAdminTheme.bind(this)
     );
     this.router.put(
       '/admin',
       AuthMiddleware.authenticate,
+      AuthMiddleware.requireAdmin,
       validateDto(UpdateThemeDto),
       this.updateTheme.bind(this)
     );

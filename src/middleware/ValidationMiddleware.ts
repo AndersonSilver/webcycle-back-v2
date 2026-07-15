@@ -5,7 +5,10 @@ import { plainToInstance } from 'class-transformer';
 export function validateDto(dtoClass: any) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const dto = plainToInstance(dtoClass, req.body);
-    const errors: ValidationError[] = await validate(dto);
+    const errors: ValidationError[] = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
 
     if (errors.length > 0) {
       const formattedErrors = errors.map((error) => ({
