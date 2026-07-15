@@ -142,6 +142,12 @@ export class HomeContentController {
           order: item.order,
         }));
       }
+      if (updateData.branding !== undefined) {
+        content.branding = {
+          logoUrl: updateData.branding.logoUrl || '',
+          showBrandName: updateData.branding.showBrandName !== false,
+        };
+      }
 
       await this.homeContentRepository.save(content);
 
@@ -278,6 +284,10 @@ export class HomeContentController {
             iconColor: 'blue-400',
           },
         ],
+      },
+      branding: {
+        logoUrl: '',
+        showBrandName: true,
       },
     };
   }

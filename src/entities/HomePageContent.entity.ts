@@ -86,6 +86,13 @@ export class HomePageContent {
     }>;
   };
 
+  // Branding (header + footer logo)
+  @Column('jsonb', { nullable: true })
+  branding?: {
+    logoUrl: string;
+    showBrandName: boolean;
+  };
+
   @CreateDateColumn()
   createdAt!: Date;
 

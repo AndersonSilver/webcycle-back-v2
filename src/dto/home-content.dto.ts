@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsArray, ValidateNested, IsObject, IsNumber } from 'class-validator';
+import { IsOptional, IsString, IsArray, ValidateNested, IsObject, IsNumber, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class ButtonDto {
@@ -160,6 +160,14 @@ class CtaDto {
   benefitCards!: BenefitCardDto[];
 }
 
+class BrandingDto {
+  @IsString()
+  logoUrl!: string;
+
+  @IsBoolean()
+  showBrandName!: boolean;
+}
+
 export class UpdateHomeContentDto {
   @IsOptional()
   @ValidateNested()
@@ -197,5 +205,10 @@ export class UpdateHomeContentDto {
   @ValidateNested({ each: true })
   @Type(() => LandingBannerItemDto)
   landingBanners?: LandingBannerItemDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BrandingDto)
+  branding?: BrandingDto;
 }
 
