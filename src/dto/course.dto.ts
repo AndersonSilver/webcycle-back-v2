@@ -75,6 +75,16 @@ export class CreateCourseDto {
   @IsOptional()
   aboutCourse?: string;
 
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  students?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  rating?: number;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => BenefitDto)
@@ -141,6 +151,20 @@ export class UpdateCourseDto {
   @Min(0)
   @IsOptional()
   lessons?: number;
+
+  @IsString()
+  @IsOptional()
+  aboutCourse?: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  students?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  rating?: number;
 
   @IsBoolean()
   @IsOptional()
