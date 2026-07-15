@@ -52,6 +52,10 @@ export class CreateCourseDto {
   @IsUrl()
   image!: string;
 
+  @IsString()
+  @IsOptional()
+  imagePosition?: string;
+
   @IsUrl()
   @IsOptional()
   videoUrl?: string;
@@ -116,6 +120,10 @@ export class UpdateCourseDto {
   @IsUrl()
   @IsOptional()
   image?: string;
+
+  @IsString()
+  @IsOptional()
+  imagePosition?: string;
 
   @IsUrl()
   @IsOptional()

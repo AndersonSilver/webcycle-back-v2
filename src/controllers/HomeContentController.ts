@@ -182,6 +182,14 @@ export class HomeContentController {
           text: 'Podcasts',
           action: 'podcasts',
         },
+        showStats: true,
+        statsMode: 'auto',
+        stats: {
+          courses: '',
+          students: '50.000+',
+          rating: '',
+          hours: '',
+        },
       },
       carousel: [
         {

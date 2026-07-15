@@ -43,6 +43,10 @@ export class Course {
   @Column()
   image!: string;
 
+  /** CSS object-position, e.g. "50% 30%" — enquadra a capa do curso */
+  @Column({ type: 'varchar', nullable: true, default: '50% 50%' })
+  imagePosition?: string;
+
   @Column({ nullable: true })
   videoUrl?: string;
 

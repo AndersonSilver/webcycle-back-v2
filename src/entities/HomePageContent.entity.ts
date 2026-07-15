@@ -19,6 +19,15 @@ export class HomePageContent {
     subtitle: string;
     primaryButton: { text: string; action: string };
     secondaryButton: { text: string; action: string };
+    showStats?: boolean;
+    /** 'auto' = cursos/horas/nota do sistema; 'manual' = textos do admin */
+    statsMode?: 'auto' | 'manual';
+    stats?: {
+      courses: string;
+      students: string;
+      rating: string;
+      hours: string;
+    };
   };
 
   // Carousel Images

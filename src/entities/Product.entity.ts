@@ -39,6 +39,10 @@ export class Product {
   @Column()
   image!: string;
 
+  /** CSS object-position, e.g. "50% 30%" — enquadra a capa no card */
+  @Column({ type: 'varchar', nullable: true, default: '50% 50%', name: 'imagePosition' })
+  imagePosition?: string;
+
   @Column('simple-array', { nullable: true })
   images?: string[];
 

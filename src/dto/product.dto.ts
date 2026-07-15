@@ -31,6 +31,10 @@ export class CreateProductDto {
   @IsString()
   image!: string;
 
+  @IsString()
+  @IsOptional()
+  imagePosition?: string;
+
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
@@ -98,6 +102,10 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   image?: string;
+
+  @IsString()
+  @IsOptional()
+  imagePosition?: string;
 
   @IsArray()
   @IsString({ each: true })

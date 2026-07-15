@@ -58,6 +58,20 @@ class CardDto {
   gradientColors!: { from: string; to: string };
 }
 
+class HeroStatsDto {
+  @IsString()
+  courses!: string;
+
+  @IsString()
+  students!: string;
+
+  @IsString()
+  rating!: string;
+
+  @IsString()
+  hours!: string;
+}
+
 class HeroDto {
   @IsString()
   badge!: string;
@@ -75,6 +89,19 @@ class HeroDto {
   @ValidateNested()
   @Type(() => ButtonDto)
   secondaryButton!: ButtonDto;
+
+  @IsOptional()
+  @IsBoolean()
+  showStats?: boolean;
+
+  @IsOptional()
+  @IsString()
+  statsMode?: 'auto' | 'manual';
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HeroStatsDto)
+  stats?: HeroStatsDto;
 }
 
 class WhyChooseUsDto {
