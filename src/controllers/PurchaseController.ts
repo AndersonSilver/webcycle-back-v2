@@ -13,6 +13,7 @@ import { AuthMiddleware } from '../middleware/AuthMiddleware';
 import { validateDto } from '../middleware/ValidationMiddleware';
 import { CheckoutDto, ConfirmPurchaseDto, ProcessPaymentDto } from '../dto/purchase.dto';
 import { calculateDiscount } from '../utils/helpers';
+import { isValidBrazilianPhone, toMercadoPagoPhone } from '../utils/phone';
 
 export class PurchaseController {
   private router: Router;
@@ -53,6 +54,11 @@ export class PurchaseController {
       const user = req.user as User;
       if (!user) {
         return res.status(401).json({ message: 'Não autenticado' });
+      }
+      if (!isValidBrazilianPhone(user.phone || '')) {
+        return res.status(400).json({
+          message: 'Telefone é obrigatório para finalizar a compra. Atualize seu perfil ou informe o contato no checkout.',
+        });
       }
       const { courses: courseIds = [], products: productItems = [], paymentMethod, couponCode, shippingAddress } = req.body as CheckoutDto;
 
@@ -333,6 +339,8 @@ export class PurchaseController {
         }
       });
 
+      const mpPhone = toMercadoPagoPhone(user.phone || '');
+
       const payment = await this.paymentService.createPayment({
         amount: finalAmount,
         description,
@@ -340,6 +348,7 @@ export class PurchaseController {
         paymentMethod,
         payerEmail: user.email,
         payerName: user.name,
+        payerPhone: mpPhone || undefined,
         courses: paymentItems,
       });
 
@@ -369,6 +378,11 @@ export class PurchaseController {
       const user = req.user as User;
       if (!user) {
         return res.status(401).json({ message: 'Não autenticado' });
+      }
+      if (!isValidBrazilianPhone(user.phone || '')) {
+        return res.status(400).json({
+          message: 'Telefone é obrigatório para finalizar a compra. Atualize seu perfil ou informe o contato no checkout.',
+        });
       }
 
       const purchase = await this.purchaseRepository.findOne({
@@ -415,6 +429,7 @@ export class PurchaseController {
         purchaseId: purchase.id,
         payerEmail: user.email,
         payerName: user.name,
+        payerPhone: toMercadoPagoPhone(user.phone || '') || undefined,
         token: cardData.token, // Token gerado pelo Mercado Pago JS no frontend
         installments: cardData.installments ? parseInt(cardData.installments) : 1,
         paymentMethodId: cardData.paymentMethodId,

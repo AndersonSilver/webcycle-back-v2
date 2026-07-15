@@ -63,6 +63,10 @@ export interface ProcessCardPaymentData {
   purchaseId: string;
   payerEmail: string;
   payerName: string;
+  payerPhone?: {
+    area_code: string;
+    number: string;
+  };
   token: string; // Token gerado pelo Mercado Pago JS no frontend
   installments?: number;
   paymentMethodId?: string; // visa, mastercard, etc.
@@ -561,6 +565,13 @@ export class PaymentService {
         const emailName = emailParts[0];
         paymentData.payer.first_name = emailName;
         paymentData.payer.last_name = emailName;
+      }
+
+      if (data.payerPhone) {
+        paymentData.payer.phone = {
+          area_code: data.payerPhone.area_code,
+          number: data.payerPhone.number,
+        };
       }
 
       // Adiciona identification (recomendado para Brasil)
