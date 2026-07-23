@@ -24,7 +24,14 @@ export class Coupon {
   @Column({ unique: true })
   code!: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
   discount!: number;
 
   @Column({
