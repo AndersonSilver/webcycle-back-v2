@@ -225,6 +225,24 @@ export class PaymentService {
           currency_id: 'BRL',
         }];
 
+    // ✅ IMPORTANTE: o Checkout Pro cobra pela soma de unit_price * quantity dos itens.
+    // Quando os itens vêm de data.courses, eles carregam o preço cheio de cada curso/produto,
+    // sem o desconto de cupom já aplicado em data.amount (finalAmount). Para o valor cobrado
+    // refletir o cupom, adicionamos um item de ajuste negativo com a diferença.
+    const itemsTotal = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const discount = Number((itemsTotal - unitPrice).toFixed(2));
+    if (discount > 0.009) {
+      items.push({
+        id: 'discount',
+        title: 'Desconto aplicado',
+        description: 'Desconto de cupom promocional',
+        quantity: 1,
+        unit_price: -discount,
+        category_id: 'services',
+        currency_id: 'BRL',
+      });
+    }
+
     // Construir objeto payer com informações adicionais
     const payer: any = {
       email: payerEmail,
