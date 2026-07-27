@@ -3,6 +3,8 @@ import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { Purchase, PaymentStatus } from '../entities/Purchase.entity';
 import { ProductType } from '../entities/Product.entity';
+import { Course } from '../entities/Course.entity';
+import { PurchaseCourse } from '../entities/PurchaseCourse.entity';
 import { PaymentService } from '../services/PaymentService';
 import { emailService } from '../services/EmailService';
 import { SaleNotificationRecipient } from '../entities/SaleNotificationRecipient.entity';
@@ -10,6 +12,8 @@ import { SaleNotificationRecipient } from '../entities/SaleNotificationRecipient
 export class WebhookController {
   private router: Router;
   private purchaseRepository: Repository<Purchase>;
+  private courseRepository: Repository<Course>;
+  private purchaseCourseRepository: Repository<PurchaseCourse>;
   private saleNotificationRepository: Repository<SaleNotificationRecipient>;
   private paymentService: PaymentService;
   // Cache para evitar processar o mesmo payment_id múltiplas vezes em sequência
@@ -20,6 +24,8 @@ export class WebhookController {
   constructor() {
     this.router = Router();
     this.purchaseRepository = AppDataSource.getRepository(Purchase);
+    this.courseRepository = AppDataSource.getRepository(Course);
+    this.purchaseCourseRepository = AppDataSource.getRepository(PurchaseCourse);
     this.saleNotificationRepository = AppDataSource.getRepository(SaleNotificationRecipient);
     this.paymentService = new PaymentService();
     this.setupRoutes();
@@ -284,7 +290,9 @@ export class WebhookController {
 
     if (purchase) {
       console.log(`✅ Compra encontrada: ${purchase.id}`);
-      
+
+      const previousStatus = purchase.paymentStatus;
+
       // Buscar status atual do pagamento
       const paymentStatus = await this.paymentService.getPaymentStatus(paymentId);
       console.log(`📊 Status do pagamento: ${paymentStatus}`);
@@ -299,12 +307,31 @@ export class WebhookController {
         status = PaymentStatus.REFUNDED;
       }
 
-      await this.purchaseRepository.update(purchase.id, { 
+      await this.purchaseRepository.update(purchase.id, {
         paymentStatus: status,
         paymentId: paymentId, // Atualiza com o payment_id real se for diferente
       });
 
       console.log(`✅ Status da compra ${purchase.id} atualizado para: ${status}`);
+
+      // Contador de alunos por curso: incrementar apenas na primeira transição para PAID,
+      // para não somar de novo em retries do webhook (MP reenvia a mesma notificação várias vezes)
+      if (status === PaymentStatus.PAID && previousStatus !== PaymentStatus.PAID) {
+        try {
+          const purchaseCourses = await this.purchaseCourseRepository.find({
+            where: { purchaseId: purchase.id },
+          });
+          for (const pc of purchaseCourses) {
+            await this.courseRepository.increment({ id: pc.courseId }, 'students', 1);
+          }
+          if (purchaseCourses.length > 0) {
+            console.log(`👥 Contador de alunos incrementado para ${purchaseCourses.length} curso(s) da compra ${purchase.id}`);
+          }
+        } catch (error) {
+          console.error('Erro ao incrementar contador de alunos:', error);
+          // Não falhar o webhook por causa disso
+        }
+      }
 
       // Se pagamento foi aprovado, enviar email de confirmação
       if (status === PaymentStatus.PAID) {
